@@ -39,7 +39,7 @@ $app->get('/foo', function ($req, $res, $args) {
 $app->post('/bar', function ($req, $res, $args) {
     // CSRF protection successful if you reached
     // this far.
-})
+});
 
 $app->run();
 ```
