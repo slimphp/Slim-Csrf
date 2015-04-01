@@ -25,6 +25,12 @@ class Guard
      * @var null|array|ArrayAccess
      */
     protected $storage;
+    
+    /**CSRF Strength
+     * 
+     * @var int
+     */
+     protected $strength = 16;
 
     /**
      * Create new CSRF guard
@@ -102,18 +108,29 @@ class Guard
      */
     protected function createToken()
     {
-        if (function_exists("hash_algos") && in_array("sha512", hash_algos())) {
-            $token = hash("sha512", mt_rand(0, mt_getrandmax()));
-        } else {
-            $token = ' ';
-            for ($i = 0; $i < 128; ++$i) {
-                $rVal = mt_rand(0, 35);
-                if ($rVal < 26) {
-                    $cVal = chr(ord('a') + $rVal);
-                } else {
-                    $cVal = chr(ord('0') + $rVal - 26);
+        $token = "";
+        
+        if (function_exists("openssl_random_pseudo_bytes")) {
+            $rawToken = openssl_random_pseudo_bytes($this->strength);
+            if ($rawToken !== false) {
+                $token = bin2hex($token);
+            }
+        } 
+        
+        if ($token == "") {
+            if (function_exists("hash_algos") && in_array("sha512", hash_algos())) {
+                $token = hash("sha512", mt_rand(0, mt_getrandmax()));
+            } else {
+                $token = ' ';
+                for ($i = 0; $i < 128; ++$i) {
+                    $rVal = mt_rand(0, 35);
+                    if ($rVal < 26) {
+                        $cVal = chr(ord('a') + $rVal);
+                    } else {
+                        $cVal = chr(ord('0') + $rVal - 26);
+                    }
+                    $token .= $cVal;
                 }
-                $token .= $cVal;
             }
         }
 
