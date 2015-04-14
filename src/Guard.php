@@ -89,7 +89,11 @@ class Guard
     protected function validateToken($name, $value)
     {
         $token = $this->getFromStorage($name);
-        $result = ($token !== false && $token === $value);
+        if (function_exists('hash_equals')) {
+            $result = ($token !== false && hash_equals($token, $value));
+        } else {
+            $result = ($token !== false && $token === $value);
+        }
         $this->removeFromStorage($name);
 
         return $result;
