@@ -32,7 +32,7 @@ class CsrfTest extends \PHPUnit_Framework_TestCase
         $env = \Slim\Http\Environment::mock();
         $serverParams = new \Slim\Http\Collection($env->all());
         $body = new \Slim\Http\Body(fopen('php://temp', 'r+'));
-        $this->request = new \Slim\Http\Request('GET', $uri, $headers, $cookies, $serverParams, $body);
+        $this->request = new \Slim\Http\Request('GET', $uri, $headers, $cookies->all(), $serverParams->all(), $body);
         $this->response = new \Slim\Http\Response;
     }
 
