@@ -28,9 +28,9 @@ class CsrfTest extends \PHPUnit_Framework_TestCase
     {
         $uri = \Slim\Http\Uri::createFromString('https://example.com:443/foo/bar?abc=123');
         $headers = new \Slim\Http\Headers();
-        $cookies = new \Slim\Collection();
+        $cookies = new \Slim\Http\Collection();
         $env = \Slim\Http\Environment::mock();
-        $serverParams = new \Slim\Collection($env->all());
+        $serverParams = new \Slim\Http\Collection($env->all());
         $body = new \Slim\Http\Body(fopen('php://temp', 'r+'));
         $this->request = new \Slim\Http\Request('GET', $uri, $headers, $cookies, $serverParams, $body);
         $this->response = new \Slim\Http\Response;
