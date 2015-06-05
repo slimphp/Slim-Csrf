@@ -1,6 +1,8 @@
 <?php
 namespace Slim\Csrf;
 
+use ArrayAccess;
+use RuntimeException;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
@@ -25,9 +27,9 @@ class Guard
      * @var null|array|ArrayAccess
      */
     protected $storage;
-    
+
     /**CSRF Strength
-     * 
+     *
      * @var int
      */
      protected $strength = 16;
@@ -37,15 +39,16 @@ class Guard
      *
      * @param string                 $prefix
      * @param null|array|ArrayAccess $storage
+     * @throws RuntimeException if the session cannot be found
      */
     public function __construct($prefix = 'csrf', $storage = null)
     {
         $this->prefix = rtrim($prefix, '_');
-        if (is_array($storage) || $storage instanceof \ArrayAccess) {
+        if (is_array($storage) || $storage instanceof ArrayAccess) {
             $this->storage = $storage;
         } else {
             if (!isset($_SESSION)) {
-                throw new \RuntimeException('CSRF middleware failed. Session not found.');
+                throw new RuntimeException('CSRF middleware failed. Session not found.');
             }
             $this->storage = &$_SESSION;
         }
@@ -113,14 +116,14 @@ class Guard
     protected function createToken()
     {
         $token = "";
-        
+
         if (function_exists("openssl_random_pseudo_bytes")) {
             $rawToken = openssl_random_pseudo_bytes($this->strength);
             if ($rawToken !== false) {
                 $token = bin2hex($token);
             }
-        } 
-        
+        }
+
         if ($token == "") {
             if (function_exists("hash_algos") && in_array("sha512", hash_algos())) {
                 $token = hash("sha512", mt_rand(0, mt_getrandmax()));
