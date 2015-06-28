@@ -129,7 +129,12 @@ class Guard implements ServiceProviderInterface
     {
         $token = "";
 
-        if (function_exists("openssl_random_pseudo_bytes")) {
+        if (function_exists("random_bytes")) {
+            $rawToken = random_bytes($this->strength);
+            if ($rawToken !== false) {
+                $token = bin2hex($token);
+            }
+        } else if (function_exists("openssl_random_pseudo_bytes")) {
             $rawToken = openssl_random_pseudo_bytes($this->strength);
             if ($rawToken !== false) {
                 $token = bin2hex($token);
