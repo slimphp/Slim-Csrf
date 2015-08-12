@@ -67,6 +67,26 @@ class Guard implements ServiceProviderInterface
     }
 
     /**
+     * Retrieve token name key
+     *
+     * @return string;
+     */
+    public function getTokenNameKey()
+    {
+        return $this->prefix . '_name';
+    }
+
+    /**
+     * Retrieve token value key
+     *
+     * @return string;
+     */
+    public function getTokenValueKey()
+    {
+        return $this->prefix . '_value';
+    }
+
+    /**
      * Invoke middleware
      *
      * @param  RequestInterface  $request  PSR7 request object

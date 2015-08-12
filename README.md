@@ -29,8 +29,8 @@ $app->add(new \Slim\Csrf\Guard);
 
 $app->get('/foo', function ($req, $res, $args) {
     // CSRF token name and value
-    $name = $req->getAttribute('csrf_name');
-    $value = $req->getAttribute('csrf_value');
+    $name = $req->getAttribute($this->csrf->getTokenNameKey());
+    $value = $req->getAttribute($this->csrf->getTokenValueKey());
 
     // Render HTML form hidden input with this
     // CSRF token name and value.
