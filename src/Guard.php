@@ -69,7 +69,7 @@ class Guard implements ServiceProviderInterface
     /**
      * Retrieve token name key
      *
-     * @return string;
+     * @return string
      */
     public function getTokenNameKey()
     {
@@ -79,7 +79,7 @@ class Guard implements ServiceProviderInterface
     /**
      * Retrieve token value key
      *
-     * @return string;
+     * @return string
      */
     public function getTokenValueKey()
     {
