@@ -43,6 +43,14 @@ class CsrfTest extends \PHPUnit_Framework_TestCase
         $this->response = new Response;
     }
 
+    public function testTokenKeys()
+    {
+        $mw = new Guard('test');
+
+        $this->assertEquals('test_name', $mw->getTokenNameKey());
+        $this->assertEquals('test_value', $mw->getTokenValueKey());
+    }
+
     public function testValidToken()
     {
         $storage = ['csrf_123' => 'xyz'];
