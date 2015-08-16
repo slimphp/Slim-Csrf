@@ -107,20 +107,29 @@ class Guard
             $name = isset($body[$this->prefix . '_name']) ? $body[$this->prefix . '_name'] : false;
             $value = isset($body[$this->prefix . '_value']) ? $body[$this->prefix . '_value'] : false;
             if (!$name || !$value || !$this->validateToken($name, $value)) {
+				// Need to regenerate a new token, as the validateToken removed the current one.
+				$request = $this->generateNewToken($request);
+				
                 $failureCallable = $this->getFailureCallable();
                 return $failureCallable($request, $response, $next);
             }
         }
+		// Generate new CSRF token
+		$request = $this->generateNewToken($request);        
 
-        // Generate new CSRF token
+        return $next($request, $response);
+    }
+	
+	protected function generateNewToken($request){
+		// Generate new CSRF token
         $name = $this->prefix . mt_rand(0, mt_getrandmax());
         $value = $this->createToken();
         $this->saveToStorage($name, $value);
         $request = $request->withAttribute($this->prefix . '_name', $name)
                            ->withAttribute($this->prefix . '_value', $value);
-
-        return $next($request, $response);
-    }
+	   
+		return $request;
+	}
 
     /**
      * Validate CSRF token from current request
