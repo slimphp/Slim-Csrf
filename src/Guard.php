@@ -28,7 +28,8 @@ class Guard
      */
     protected $storage;
 
-    /**CSRF Strength
+    /**
+     * CSRF Strength
      *
      * @var int
      */
