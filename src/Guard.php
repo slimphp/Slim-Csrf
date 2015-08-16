@@ -5,8 +5,6 @@ use ArrayAccess;
 use RuntimeException;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Pimple\Container;
-use Pimple\ServiceProviderInterface;
 
 /**
  * CSRF protection middleware based
@@ -14,7 +12,7 @@ use Pimple\ServiceProviderInterface;
  *
  * @link https://www.owasp.org/index.php/PHP_CSRF_Guard
  */
-class Guard implements ServiceProviderInterface
+class Guard
 {
     /**
      * Prefix for CSRF parameters (omit trailing "_" underscore)
@@ -54,16 +52,6 @@ class Guard implements ServiceProviderInterface
             }
             $this->storage = &$_SESSION;
         }
-    }
-
-    /**
-     * Register service provider
-     *
-     * @param  \Pimple\Container $container
-     */
-    public function register(Container $container)
-    {
-        $container['csrf'] = $this;
     }
 
     /**
