@@ -54,6 +54,39 @@ $app->post('/bar', function ($req, $res, $args) {
 $app->run();
 ```
 
+## Handling validation failure
+
+By default, `Slim\Csrf\Guard` will return a Response with a 400 status code and
+a simple plain text error message.
+
+To override this, provide a callable as the third parameter to the constructor
+or via `setFailureCallable()`. This callable has the same signature as
+middleware: `function($request, $response, $next)` and must return a Response.
+
+For example:
+
+```php
+$container['csrf'] = function ($c) {
+    $guard = new \Slim\Csrf\Guard();
+    $guard->setFailureCallable(function ($request, $response, $next) {
+        $request = $request->withAttribute("csrf_status", false);
+        return $next($request, $response);
+    });
+    return $guard;
+};
+```
+
+In this example, an attribute is set on the request object that can then be
+checked in subsequent middleware or the route callable using:
+
+```php
+if (false === $request->getAttribute('csrf_status')) {
+    // display suitable error here
+} else {
+    // successfully passed CSRF check
+}
+```
+
 ## Testing
 
 ``` bash
