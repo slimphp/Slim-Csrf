@@ -24,16 +24,26 @@ session_start();
 
 $app = new \Slim\App();
 
+// Register with container
+$container = $app->getContainer();
+$container['csrf'] = function ($c) {
+    return new \Slim\Csrf\Guard;
+};
+
 // Register middleware
-$app->add(new \Slim\Csrf\Guard);
+$app->add($container->get('csrf'));
 
 $app->get('/foo', function ($req, $res, $args) {
     // CSRF token name and value
-    $name = $req->getAttribute($this->csrf->getTokenNameKey());
-    $value = $req->getAttribute($this->csrf->getTokenValueKey());
+    $nameKey = $this->csrf->getTokenNameKey();
+    $valueKey = $this->csrf->getTokenValueKey();
+    $name = $req->getAttribute($nameKey);
+    $value = $req->getAttribute($valueKey);
 
-    // Render HTML form hidden input with this
-    // CSRF token name and value.
+    // Render HTML form which POSTs to /bar with two hidden input fields for the
+    // name and value:
+    // <input type="hidden" name="<?= $nameKey ?>" value="<?= $name ?>">
+    // <input type="hidden" name="<?= $valueKey ?>" value="<?= $value ?>">
 });
 
 $app->post('/bar', function ($req, $res, $args) {
