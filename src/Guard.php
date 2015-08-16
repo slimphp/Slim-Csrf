@@ -158,7 +158,7 @@ class Guard
             if ($rawToken !== false) {
                 $token = bin2hex($token);
             }
-        } else if (function_exists("openssl_random_pseudo_bytes")) {
+        } elseif (function_exists("openssl_random_pseudo_bytes")) {
             $rawToken = openssl_random_pseudo_bytes($this->strength);
             if ($rawToken !== false) {
                 $token = bin2hex($token);
