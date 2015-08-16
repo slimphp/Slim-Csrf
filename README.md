@@ -24,8 +24,13 @@ session_start();
 
 $app = new \Slim\App();
 
+// Fetch DI Container
+$container = $app->getContainer();
+
 // Register middleware
-$app->add(new \Slim\Csrf\Guard);
+$container['csrf'] = function () { 
+    new \Slim\Csrf\Guard();
+};
 
 $app->get('/foo', function ($req, $res, $args) {
     // CSRF token name and value
