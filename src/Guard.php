@@ -36,13 +36,25 @@ class Guard
      protected $strength = 16;
 
     /**
+     * Callable to be executed if the CSRF validation fails
+     *
+     * Signature of callable is:
+     *    function($request, $response, $next)
+     * and a $response must be returned.
+     *
+     * @var callable
+     */
+    protected $failureCallable;
+
+    /**
      * Create new CSRF guard
      *
      * @param string                 $prefix
      * @param null|array|ArrayAccess $storage
+     * @param null|callable          $failureCallable
      * @throws RuntimeException if the session cannot be found
      */
-    public function __construct($prefix = 'csrf', $storage = null)
+    public function __construct($prefix = 'csrf', $storage = null, callable $failureCallable = null)
     {
         $this->prefix = rtrim($prefix, '_');
         if (is_array($storage) || $storage instanceof ArrayAccess) {
@@ -53,6 +65,8 @@ class Guard
             }
             $this->storage = &$_SESSION;
         }
+
+        $this->setFailureCallable($failureCallable);
     }
 
     /**
@@ -93,7 +107,8 @@ class Guard
             $name = isset($body[$this->prefix . '_name']) ? $body[$this->prefix . '_name'] : false;
             $value = isset($body[$this->prefix . '_value']) ? $body[$this->prefix . '_value'] : false;
             if (!$name || !$value || !$this->validateToken($name, $value)) {
-                return $response->withStatus(400);
+                $failureCallable = $this->getFailureCallable();
+                return $failureCallable($request, $response, $next);
             }
         }
 
@@ -202,5 +217,34 @@ class Guard
     {
         $this->storage[$name] = ' ';
         unset($this->storage[$name]);
+    }
+
+    /**
+     * Getter for failureCallable
+     *
+     * @return mixed
+     */
+    public function getFailureCallable()
+    {
+        if (is_null($this->failureCallable)) {
+            $this->failureCallable = function ($request, $response, $next) {
+                $body = new \Slim\Http\Body(fopen('php://temp', 'r+'));
+                $body->write('Failed CSRF check!');
+                return $response->withStatus(400)->withHeader('Content-type', 'text/plain')->withBody($body);
+            };
+        }
+        return $this->failureCallable;
+    }
+    
+    /**
+     * Setter for failureCallable
+     *
+     * @param mixed $failureCallable Value to set
+     * @return self
+     */
+    public function setFailureCallable($failureCallable)
+    {
+        $this->failureCallable = $failureCallable;
+        return $this;
     }
 }
