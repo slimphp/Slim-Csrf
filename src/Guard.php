@@ -29,6 +29,13 @@ class Guard
     protected $storage;
 
     /**
+     * Number of elements to store in the storage array
+     *
+     * @var integer
+     */
+    protected $storageLimit = 200;
+
+    /**
      * CSRF Strength
      *
      * @var int
@@ -233,6 +240,20 @@ class Guard
     {
         $this->storage[$name] = ' ';
         unset($this->storage[$name]);
+    }
+
+    /**
+     * Remove the oldest tokens from the storage array so that there
+     * are never more than storageLimit tokens in the array.
+     *
+     * This is required as a token is generated every request and so
+     * most will never be used.
+     */
+    protected function enforceStorageLimit()
+    {
+        while (count($this->storage) > $this->storageLimit) {
+            array_shift($this->storage);
+        }
     }
 
     /**
