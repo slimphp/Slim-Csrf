@@ -2,6 +2,7 @@
 namespace Slim\Csrf;
 
 use ArrayAccess;
+use Countable;
 use RuntimeException;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -24,7 +25,10 @@ class Guard
     /**
      * CSRF storage
      *
-     * @var null|array|ArrayAccess
+     * Should be either an array or an object that implements
+     * ArrayAccess and Countable.
+     *
+     * @var array|ArrayAccess
      */
     protected $storage;
 
@@ -123,6 +127,9 @@ class Guard
         }
         // Generate new CSRF token
         $request = $this->generateNewToken($request);
+
+        // Enforce the storage limit
+        $this->enforceStorageLimit();
 
         return $next($request, $response);
     }
@@ -251,6 +258,14 @@ class Guard
      */
     protected function enforceStorageLimit()
     {
+        if ($this->storageLimit < 1) {
+            return;
+        }
+
+        if (!is_array($this->storage) && !$this->storage instanceof Countable) {
+            return;
+        }
+
         while (count($this->storage) > $this->storageLimit) {
             array_shift($this->storage);
         }
