@@ -35,9 +35,11 @@ class Guard
     /**
      * Number of elements to store in the storage array
      *
+     * Default is 200, set via constructor
+     *
      * @var integer
      */
-    protected $storageLimit = 200;
+    protected $storageLimit;
 
     /**
      * CSRF Strength
@@ -63,9 +65,10 @@ class Guard
      * @param string                 $prefix
      * @param null|array|ArrayAccess $storage
      * @param null|callable          $failureCallable
+     * @param integer                $storageLimit
      * @throws RuntimeException if the session cannot be found
      */
-    public function __construct($prefix = 'csrf', $storage = null, callable $failureCallable = null)
+    public function __construct($prefix = 'csrf', $storage = null, callable $failureCallable = null, $storageLimit = 200)
     {
         $this->prefix = rtrim($prefix, '_');
         if (is_array($storage) || $storage instanceof ArrayAccess) {
@@ -78,6 +81,7 @@ class Guard
         }
 
         $this->setFailureCallable($failureCallable);
+        $this->setStorageLimit($storageLimit);
     }
 
     /**
