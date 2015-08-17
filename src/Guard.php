@@ -284,4 +284,15 @@ class Guard
         $this->failureCallable = $failureCallable;
         return $this;
     }
+
+    /**
+     * Setter for storageLimit
+     *
+     * @param integer $storageLimit Value to set
+     */
+    public function setStorageLimit($storageLimit)
+    {
+        $this->storageLimit = (int)$storageLimit;
+        return $this;
+    }
 }
