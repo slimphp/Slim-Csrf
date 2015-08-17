@@ -107,4 +107,46 @@ class CsrfTest extends \PHPUnit_Framework_TestCase
 
         $this->assertEquals(400, $newResponse->getStatusCode());
     }
+
+    public function testExternalStorageOfAnArrayAccessPersists()
+    {
+        $storage = new \ArrayObject();
+        
+        $request = $this->request
+                        ->withMethod('POST')
+                        ->withParsedBody([
+                            'csrf_name' => 'csrf_123',
+                            'csrf_value' => 'xyz'
+                        ]);
+        $response = $this->response;
+        $next = function ($req, $res) {
+            return $res;
+        };
+        $mw = new Guard('csrf', $storage);
+
+        $this->assertEquals(0, count($storage));
+        $newResponse = $mw($request, $response, $next);
+        $this->assertEquals(1, count($storage));
+    }
+
+    public function testExternalStorageOfAnArrayPersists()
+    {
+        $storage = [];
+        
+        $request = $this->request
+                        ->withMethod('POST')
+                        ->withParsedBody([
+                            'csrf_name' => 'csrf_123',
+                            'csrf_value' => 'xyz'
+                        ]);
+        $response = $this->response;
+        $next = function ($req, $res) {
+            return $res;
+        };
+        $mw = new Guard('csrf', $storage);
+
+        $this->assertEquals(0, count($storage));
+        $newResponse = $mw($request, $response, $next);
+        $this->assertEquals(1, count($storage));
+    }
 }
