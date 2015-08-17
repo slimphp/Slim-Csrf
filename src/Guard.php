@@ -2,6 +2,7 @@
 namespace Slim\Csrf;
 
 use ArrayAccess;
+use Countable;
 use RuntimeException;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -24,9 +25,21 @@ class Guard
     /**
      * CSRF storage
      *
-     * @var null|array|ArrayAccess
+     * Should be either an array or an object that implements
+     * ArrayAccess and Countable.
+     *
+     * @var array|ArrayAccess
      */
     protected $storage;
+
+    /**
+     * Number of elements to store in the storage array
+     *
+     * Default is 200, set via constructor
+     *
+     * @var integer
+     */
+    protected $storageLimit;
 
     /**
      * CSRF Strength
@@ -52,9 +65,10 @@ class Guard
      * @param string                 $prefix
      * @param null|array|ArrayAccess $storage
      * @param null|callable          $failureCallable
+     * @param integer                $storageLimit
      * @throws RuntimeException if the session cannot be found
      */
-    public function __construct($prefix = 'csrf', $storage = null, callable $failureCallable = null)
+    public function __construct($prefix = 'csrf', $storage = null, callable $failureCallable = null, $storageLimit = 200)
     {
         $this->prefix = rtrim($prefix, '_');
         if (is_array($storage) || $storage instanceof ArrayAccess) {
@@ -67,6 +81,7 @@ class Guard
         }
 
         $this->setFailureCallable($failureCallable);
+        $this->setStorageLimit($storageLimit);
     }
 
     /**
@@ -117,6 +132,9 @@ class Guard
         // Generate new CSRF token
         $request = $this->generateNewToken($request);
 
+        // Enforce the storage limit
+        $this->enforceStorageLimit();
+
         return $next($request, $response);
     }
 
@@ -127,7 +145,8 @@ class Guard
      *
      * @return RequestInterface PSR7 response object.
      */
-    protected function generateNewToken($request){
+    protected function generateNewToken($request)
+    {
         // Generate new CSRF token
         $name = $this->prefix . mt_rand(0, mt_getrandmax());
         $value = $this->createToken();
@@ -236,6 +255,28 @@ class Guard
     }
 
     /**
+     * Remove the oldest tokens from the storage array so that there
+     * are never more than storageLimit tokens in the array.
+     *
+     * This is required as a token is generated every request and so
+     * most will never be used.
+     */
+    protected function enforceStorageLimit()
+    {
+        if ($this->storageLimit < 1) {
+            return;
+        }
+
+        if (!is_array($this->storage) && !$this->storage instanceof Countable) {
+            return;
+        }
+
+        while (count($this->storage) > $this->storageLimit) {
+            array_shift($this->storage);
+        }
+    }
+
+    /**
      * Getter for failureCallable
      *
      * @return mixed
@@ -261,6 +302,17 @@ class Guard
     public function setFailureCallable($failureCallable)
     {
         $this->failureCallable = $failureCallable;
+        return $this;
+    }
+
+    /**
+     * Setter for storageLimit
+     *
+     * @param integer $storageLimit Value to set
+     */
+    public function setStorageLimit($storageLimit)
+    {
+        $this->storageLimit = (int)$storageLimit;
         return $this;
     }
 }
