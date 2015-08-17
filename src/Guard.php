@@ -68,10 +68,12 @@ class Guard
      * @param integer                $storageLimit
      * @throws RuntimeException if the session cannot be found
      */
-    public function __construct($prefix = 'csrf', $storage = null, callable $failureCallable = null, $storageLimit = 200)
+    public function __construct($prefix = 'csrf', &$storage = null, callable $failureCallable = null, $storageLimit = 200)
     {
         $this->prefix = rtrim($prefix, '_');
-        if (is_array($storage) || $storage instanceof ArrayAccess) {
+        if (is_array($storage)) {
+            $this->storage = &$storage;
+        } elseif ($storage instanceof ArrayAccess) {
             $this->storage = $storage;
         } else {
             if (!isset($_SESSION)) {
