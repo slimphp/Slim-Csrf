@@ -77,7 +77,10 @@ class Guard
             if (!isset($_SESSION)) {
                 throw new RuntimeException('CSRF middleware failed. Session not found.');
             }
-            $this->storage = &$_SESSION;
+            if (!array_key_exists($prefix, $_SESSION)) {
+                $_SESSION[$prefix] = [];
+            }
+            $this->storage = &$_SESSION[$prefix];
         }
 
         $this->setFailureCallable($failureCallable);
