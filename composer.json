@@ -1,7 +1,7 @@
 {
     "name": "slim/csrf",
     "type": "library",
-    "description": "Slim Framework CSRF protection middleware",
+    "description": "Slim Framework 3 CSRF protection middleware",
     "keywords": ["slim","framework","middleware","csrf"],
     "homepage": "http://slimframework.com",
     "license": "MIT",
