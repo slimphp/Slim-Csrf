@@ -149,4 +149,42 @@ class CsrfTest extends \PHPUnit_Framework_TestCase
         $newResponse = $mw($request, $response, $next);
         $this->assertEquals(1, count($storage));
     }
+
+    public function testStorageLimitIsEnforcedForObjects()
+    {
+        $storage = new \ArrayObject();
+        
+        $request = $this->request;
+        $response = $this->response;
+        $next = function ($req, $res) {
+            return $res;
+        };
+        $mw = new Guard('csrf', $storage);
+        $mw->setStorageLimit(2);
+
+        $this->assertEquals(0, count($storage));
+        $response = $mw($request, $response, $next);
+        $response = $mw($request, $response, $next);
+        $response = $mw($request, $response, $next);
+        $this->assertEquals(2, count($storage));
+    }
+
+    public function testStorageLimitIsEnforcedForArrays()
+    {
+        $storage = [];
+        
+        $request = $this->request;
+        $response = $this->response;
+        $next = function ($req, $res) {
+            return $res;
+        };
+        $mw = new Guard('csrf', $storage);
+        $mw->setStorageLimit(2);
+
+        $this->assertEquals(0, count($storage));
+        $response = $mw($request, $response, $next);
+        $response = $mw($request, $response, $next);
+        $response = $mw($request, $response, $next);
+        $this->assertEquals(2, count($storage));
+    }
 }
