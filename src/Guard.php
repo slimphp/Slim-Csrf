@@ -141,7 +141,8 @@ class Guard
      *
      * @return RequestInterface PSR7 response object.
      */
-    protected function generateNewToken($request){
+    protected function generateNewToken($request)
+    {
         // Generate new CSRF token
         $name = $this->prefix . mt_rand(0, mt_getrandmax());
         $value = $this->createToken();
