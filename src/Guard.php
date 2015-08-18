@@ -3,7 +3,7 @@ namespace Slim\Csrf;
 
 use ArrayAccess;
 use Countable;
-use Iterator;
+use Traversable;
 use IteratorAggregate;
 use RuntimeException;
 use Psr\Http\Message\RequestInterface;
@@ -272,10 +272,9 @@ class Guard
             return;
         }
 
-        // $storage must be an array or implement Countable and either Iterator or IteratorAggregate
+        // $storage must be an array or implement Countable and Traversable
         if (!is_array($this->storage)
-            && !($this->storage instanceof Countable
-                && ($this->storage instanceof Iterator || $this->storage instanceof IteratorAggregate))
+            && !($this->storage instanceof Countable && $this->storage instanceof Traversable)
         ) {
             return;
         }
