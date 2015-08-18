@@ -3,6 +3,8 @@ namespace Slim\Csrf;
 
 use ArrayAccess;
 use Countable;
+use Traversable;
+use IteratorAggregate;
 use RuntimeException;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -25,8 +27,9 @@ class Guard
     /**
      * CSRF storage
      *
-     * Should be either an array or an object that implements
-     * ArrayAccess and Countable.
+     * Should be either an array or an object. If an object is used, then it must
+     * implement ArrayAccess and should implement Countable and Iterator (or
+     * IteratorAggregate) if storage limit enforcement is required.
      *
      * @var array|ArrayAccess
      */
@@ -68,10 +71,12 @@ class Guard
      * @param integer                $storageLimit
      * @throws RuntimeException if the session cannot be found
      */
-    public function __construct($prefix = 'csrf', $storage = null, callable $failureCallable = null, $storageLimit = 200)
+    public function __construct($prefix = 'csrf', &$storage = null, callable $failureCallable = null, $storageLimit = 200)
     {
         $this->prefix = rtrim($prefix, '_');
-        if (is_array($storage) || $storage instanceof ArrayAccess) {
+        if (is_array($storage)) {
+            $this->storage = &$storage;
+        } elseif ($storage instanceof ArrayAccess) {
             $this->storage = $storage;
         } else {
             if (!isset($_SESSION)) {
@@ -270,12 +275,28 @@ class Guard
             return;
         }
 
-        if (!is_array($this->storage) && !$this->storage instanceof Countable) {
+        // $storage must be an array or implement Countable and Traversable
+        if (!is_array($this->storage)
+            && !($this->storage instanceof Countable && $this->storage instanceof Traversable)
+        ) {
             return;
         }
 
-        while (count($this->storage) > $this->storageLimit) {
-            array_shift($this->storage);
+        if (is_array($this->storage)) {
+            while (count($this->storage) > $this->storageLimit) {
+                array_shift($this->storage);
+            }
+        } else {
+            // array_shift() doesn't work for ArrayAccess, so we need an iterator in order to use rewind()
+            // and key(), so that we can then unset
+            $iterator = $this->storage;
+            if ($this->storage instanceof \IteratorAggregate) {
+                $iterator = $this->storage->getIterator();
+            }
+            while (count($this->storage) > $this->storageLimit) {
+                $iterator->rewind();
+                unset($this->storage[$iterator->key()]);
+            }
         }
     }
 
