@@ -168,7 +168,12 @@ class Guard
         $name = $this->prefix . mt_rand(0, mt_getrandmax());
         $value = $this->createToken();
         $this->saveToStorage($name, $value);
-        $this->keyPair[$name] = $value;
+
+        $this->keyPair = [
+            $this->prefix . '_name' => $name,
+            $this->prefix . '_value' => $value
+        ];
+
         $request = $request->withAttribute($this->prefix . '_name', $name)
             ->withAttribute($this->prefix . '_value', $value);
 
