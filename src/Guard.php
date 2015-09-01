@@ -3,6 +3,7 @@ namespace Slim\Csrf;
 
 use ArrayAccess;
 use Countable;
+use Psr\Http\Message\ServerRequestInterface;
 use Traversable;
 use IteratorAggregate;
 use RuntimeException;
@@ -130,7 +131,7 @@ class Guard
      *
      * @return ResponseInterface PSR7 response object
      */
-    public function __invoke(RequestInterface $request, ResponseInterface $response, callable $next)
+    public function __invoke(ServerRequestInterface $request, ResponseInterface $response, callable $next)
     {
         // Validate POST, PUT, DELETE, PATCH requests
         if (in_array($request->getMethod(), ['POST', 'PUT', 'DELETE', 'PATCH'])) {
@@ -162,7 +163,7 @@ class Guard
      *
      * @return RequestInterface PSR7 response object.
      */
-    protected function generateNewToken($request)
+    protected function generateNewToken(ServerRequestInterface $request)
     {
         // Generate new CSRF token
         $name = $this->prefix . mt_rand(0, mt_getrandmax());
@@ -323,7 +324,7 @@ class Guard
     public function getFailureCallable()
     {
         if (is_null($this->failureCallable)) {
-            $this->failureCallable = function ($request, $response, $next) {
+            $this->failureCallable = function (ServerRequestInterface $request, ResponseInterface $response, $next) {
                 $body = new \Slim\Http\Body(fopen('php://temp', 'r+'));
                 $body->write('Failed CSRF check!');
                 return $response->withStatus(400)->withHeader('Content-type', 'text/plain')->withBody($body);
