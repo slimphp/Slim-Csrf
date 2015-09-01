@@ -187,4 +187,16 @@ class CsrfTest extends \PHPUnit_Framework_TestCase
         $response = $mw($request, $response, $next);
         $this->assertEquals(2, count($storage));
     }
+
+    public function testKeyPair() {
+        $mw = new Guard();
+
+        $next = function ($req, $res) {
+            return $res;
+        };
+
+        $response = $mw($this->request, $this->response, $next);
+
+        $this->assertNotNull($mw->getKeyPair());
+    }
 }
