@@ -358,10 +358,16 @@ class Guard
     }
 
     /**
-     * Returns the last key-pair generated
-     * @return array
+     * @return string
      */
-    public function getKeyPair() {
-        return $this->keyPair;
+    public function getTokenName() {
+        return $this->keyPair[$this->getTokenNameKey()];
+    }
+
+    /**
+     * @return string
+     */
+    public function getTokenValue() {
+        return $this->keyPair[$this->getTokenValueKey()];
     }
 }

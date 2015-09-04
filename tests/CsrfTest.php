@@ -197,6 +197,8 @@ class CsrfTest extends \PHPUnit_Framework_TestCase
 
         $response = $mw($this->request, $this->response, $next);
 
-        $this->assertNotNull($mw->getKeyPair());
+        $this->assertNotNull($mw->getTokenName());
+
+        $this->assertNotNull($mw->getTokenValue());
     }
 }
