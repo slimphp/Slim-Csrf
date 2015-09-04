@@ -3,11 +3,10 @@ namespace Slim\Csrf;
 
 use ArrayAccess;
 use Countable;
-use Psr\Http\Message\ServerRequestInterface;
 use Traversable;
 use IteratorAggregate;
 use RuntimeException;
-use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
 /**
