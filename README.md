@@ -18,6 +18,12 @@ Requires Slim 3.0.0 or newer.
 
 ## Usage
 
+In most cases you want to register Slim\Csrf for all routes, however,
+as it is middleware, you can also register it for a subset of routes.
+
+
+### Register for all routes
+
 ```php
 // Start PHP session
 session_start();
@@ -52,15 +58,29 @@ $app->post('/bar', function ($req, $res, $args) {
     // this far.
 });
 
-//Register Per Route
-//Perhaps for API's
+$app->run();
+```
+
+### Register per route
+
+```php
+// Start PHP session
+session_start();
+
+$app = new \Slim\App();
+
+// Register with container
+$container = $app->getContainer();
+$container['csrf'] = function ($c) {
+    return new \Slim\Csrf\Guard;
+};
 
 $app->get('/api/myEndPoint',function ($req, $res, $args) {
     $nameKey = $this->csrf->getTokenNameKey();
     $valueKey = $this->csrf->getTokenValueKey();
     $name = $req->getAttribute($nameKey);
     $value = $req->getAttribute($valueKey);
-    
+
     $tokenArray = [
         $nameKey => $name,
         $valueKey => $value
@@ -71,7 +91,7 @@ $app->get('/api/myEndPoint',function ($req, $res, $args) {
 
 $app->post('/api/myEndPoint',function ($req, $res, $args) {
     //Do my Things Securely!
-});
+})->addMiddleware($container->get('csrf');
 
 $app->run();
 ```
