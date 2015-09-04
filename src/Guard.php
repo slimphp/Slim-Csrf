@@ -78,8 +78,12 @@ class Guard
      * @param integer                $storageLimit
      * @throws RuntimeException if the session cannot be found
      */
-    public function __construct($prefix = 'csrf', &$storage = null, callable $failureCallable = null, $storageLimit = 200)
-    {
+    public function __construct(
+        $prefix = 'csrf',
+        &$storage = null,
+        callable $failureCallable = null,
+        $storageLimit = 200
+    ) {
         $this->prefix = rtrim($prefix, '_');
         if (is_array($storage)) {
             $this->storage = &$storage;
@@ -359,14 +363,16 @@ class Guard
     /**
      * @return string
      */
-    public function getTokenName() {
+    public function getTokenName()
+    {
         return $this->keyPair[$this->getTokenNameKey()];
     }
 
     /**
      * @return string
      */
-    public function getTokenValue() {
+    public function getTokenValue()
+    {
         return $this->keyPair[$this->getTokenValueKey()];
     }
 }
