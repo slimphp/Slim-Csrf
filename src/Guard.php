@@ -49,7 +49,7 @@ class Guard
      *
      * @var int
      */
-     protected $strength = 16;
+     protected $strength;
 
     /**
      * Callable to be executed if the CSRF validation fails
@@ -82,9 +82,11 @@ class Guard
         $prefix = 'csrf',
         &$storage = null,
         callable $failureCallable = null,
-        $storageLimit = 200
+        $storageLimit = 200,
+        $strength = 16
     ) {
         $this->prefix = rtrim($prefix, '_');
+        $this->strength = $strength;
         if (is_array($storage)) {
             $this->storage = &$storage;
         } elseif ($storage instanceof ArrayAccess) {
@@ -218,12 +220,12 @@ class Guard
         if (function_exists("random_bytes")) {
             $rawToken = random_bytes($this->strength);
             if ($rawToken !== false) {
-                $token = bin2hex($token);
+                $token = bin2hex($rawToken);
             }
         } elseif (function_exists("openssl_random_pseudo_bytes")) {
             $rawToken = openssl_random_pseudo_bytes($this->strength);
             if ($rawToken !== false) {
-                $token = bin2hex($token);
+                $token = bin2hex($rawToken);
             }
         }
 
