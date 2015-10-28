@@ -68,6 +68,12 @@ class Guard
      * @var array
      */
     protected $keyPair;
+    
+    /**
+     * Controlls whether key-use invalidates the key-pair
+     * @var bool
+     */
+    protected $strict;
 
     /**
      * Create new CSRF guard
@@ -82,8 +88,10 @@ class Guard
         $prefix = 'csrf',
         &$storage = null,
         callable $failureCallable = null,
-        $storageLimit = 200
+        $storageLimit = 200,
+        $strict = true
     ) {
+        $this->strict = ($strict);
         $this->prefix = rtrim($prefix, '_');
         if (is_array($storage)) {
             $this->storage = &$storage;
@@ -201,7 +209,10 @@ class Guard
         } else {
             $result = ($token !== false && $token === $value);
         }
-        $this->removeFromStorage($name);
+        
+        if ($this->strict) {
+            $this->removeFromStorage($name);
+        }
 
         return $result;
     }
