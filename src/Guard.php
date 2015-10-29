@@ -160,13 +160,11 @@ class Guard
     }
 
     /**
-     * Generates a new CSRF token and appends it to the request.
+     * Generates a new CSRF token
      *
-     * @param  RequestInterface $request PSR7 response object.
-     *
-     * @return RequestInterface PSR7 response object.
+     * @return array
      */
-    protected function generateNewToken(ServerRequestInterface $request)
+    public function generateNewToken()
     {
         // Generate new CSRF token
         $name = $this->prefix . mt_rand(0, mt_getrandmax());
@@ -178,10 +176,24 @@ class Guard
             $this->prefix . '_value' => $value
         ];
 
-        $request = $request->withAttribute($this->prefix . '_name', $name)
-            ->withAttribute($this->prefix . '_value', $value);
+        return $this->keyPair;
+    }
+    
+    /**
+     * Generates a new CSRF token and attaches it to the Request Object
+     * 
+     * @param  RequestInterface $request PSR7 response object.
+     * 
+     * @return RequestInterface PSR7 response object.
+     */
+    public function getNewTokenOnRequest(ServerRequestInterface $request) {
+        
+        $pair = $this->generateNewToken();
+        
+        $request = $request->withAttribute($this->prefix . '_name', $pair[$this->prefix . '_name'])
+            ->withAttribute($this->prefix . '_value', $pair[$this->prefix . '_value']);
 
-        return $request;
+        return $request;        
     }
 
     /**
