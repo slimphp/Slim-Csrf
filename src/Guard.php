@@ -164,7 +164,7 @@ class Guard
      *
      * @return array
      */
-    public function generateNewToken()
+    public function generateToken()
     {
         // Generate new CSRF token
         $name = $this->prefix . mt_rand(0, mt_getrandmax());
@@ -186,7 +186,7 @@ class Guard
      * 
      * @return RequestInterface PSR7 response object.
      */
-    public function getNewTokenOnRequest(ServerRequestInterface $request) {
+    public function generateNewToken(ServerRequestInterface $request) {
         
         $pair = $this->generateNewToken();
         
