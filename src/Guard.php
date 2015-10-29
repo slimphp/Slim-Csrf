@@ -76,6 +76,7 @@ class Guard
      * @param null|array|ArrayAccess $storage
      * @param null|callable          $failureCallable
      * @param integer                $storageLimit
+     * @param integer                $strength
      * @throws RuntimeException if the session cannot be found
      */
     public function __construct(
@@ -86,6 +87,9 @@ class Guard
         $strength = 16
     ) {
         $this->prefix = rtrim($prefix, '_');
+        if ($strength < 16) {
+            throw new RuntimeException('CSRF middleware failed. Minimum strength is 16.');
+        }
         $this->strength = $strength;
         if (is_array($storage)) {
             $this->storage = &$storage;
