@@ -91,7 +91,7 @@ $app->get('/api/myEndPoint',function ($req, $res, $args) {
 
 $app->post('/api/myEndPoint',function ($req, $res, $args) {
     //Do my Things Securely!
-})->addMiddleware($container->get('csrf');
+})->addMiddleware($container->get('csrf'));
 
 $app->run();
 ```
