@@ -188,7 +188,7 @@ class Guard
      */
     public function generateNewToken(ServerRequestInterface $request) {
         
-        $pair = $this->generateNewToken();
+        $pair = $this->generateToken();
         
         $request = $request->withAttribute($this->prefix . '_name', $pair[$this->prefix . '_name'])
             ->withAttribute($this->prefix . '_value', $pair[$this->prefix . '_value']);
