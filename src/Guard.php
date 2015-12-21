@@ -10,14 +10,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
 /**
- * CSRF protection middleware based
- * on the OWASP example linked below.
- * 
- * Warning: The token generation in
- * the OWASP example is insecure. This
- * has been fixed in this code.
- * 
- * @link https://www.owasp.org/index.php/PHP_CSRF_Guard
+ * CSRF protection middleware.
  */
 class Guard
 {
