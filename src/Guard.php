@@ -12,7 +12,11 @@ use Psr\Http\Message\ResponseInterface;
 /**
  * CSRF protection middleware based
  * on the OWASP example linked below.
- *
+ * 
+ * Warning: The token generation in
+ * the OWASP example is insecure. This
+ * has been fixed in this code.
+ * 
  * @link https://www.owasp.org/index.php/PHP_CSRF_Guard
  */
 class Guard
@@ -173,7 +177,7 @@ class Guard
     public function generateToken()
     {
         // Generate new CSRF token
-        $name = $this->prefix . mt_rand(0, mt_getrandmax());
+        $name = uniqid($this->prefix);
         $value = $this->createToken();
         $this->saveToStorage($name, $value);
 
@@ -231,38 +235,8 @@ class Guard
      */
     protected function createToken()
     {
-        $token = "";
-
-        if (function_exists("random_bytes")) {
-            $rawToken = random_bytes($this->strength);
-            if ($rawToken !== false) {
-                $token = bin2hex($rawToken);
-            }
-        } elseif (function_exists("openssl_random_pseudo_bytes")) {
-            $rawToken = openssl_random_pseudo_bytes($this->strength);
-            if ($rawToken !== false) {
-                $token = bin2hex($rawToken);
-            }
-        }
-
-        if ($token == "") {
-            if (function_exists("hash_algos") && in_array("sha512", hash_algos())) {
-                $token = hash("sha512", mt_rand(0, mt_getrandmax()));
-            } else {
-                $token = ' ';
-                for ($i = 0; $i < 128; ++$i) {
-                    $rVal = mt_rand(0, 35);
-                    if ($rVal < 26) {
-                        $cVal = chr(ord('a') + $rVal);
-                    } else {
-                        $cVal = chr(ord('0') + $rVal - 26);
-                    }
-                    $token .= $cVal;
-                }
-            }
-        }
-
-        return $token;
+        $rawToken = random_bytes($this->strength);
+        return bin2hex($rawToken);
     }
 
     /**
