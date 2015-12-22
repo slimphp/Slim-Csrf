@@ -147,6 +147,7 @@ If you discover any security related issues, please email security@slimframework
 
 - [Josh Lockhart](https://github.com/codeguy)
 - [All Contributors](../../contributors)
+- Initial inspiration from [OWASP](https://www.owasp.org/index.php/PHP_CSRF_Guard)
 
 ## License
 
