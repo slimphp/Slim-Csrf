@@ -64,15 +64,15 @@ class CsrfTest extends \PHPUnit_Framework_TestCase
         };
         $response1 = $mw($request, $response, $next);
         $response2 = $mw($request, $response, $next);
-
+        
         $this->assertStringStartsWith('csrf', $response1->getHeaderLine('X-CSRF-NAME'), 'Name key should start with csrf prefix');
         $this->assertStringStartsWith('csrf', $response2->getHeaderLine('X-CSRF-NAME'), 'Name key should start with csrf prefix');
-
+        
         $this->assertNotEquals($response1->getHeaderLine('X-CSRF-NAME'), $response2->getHeaderLine('X-CSRF-NAME'), 'Generated token names must be unique');
-
-	    $this->assertEquals(32, strlen($response1->getHeaderLine('X-CSRF-VALUE')), 'Length of the generated token value should be double the strength');
+        
+        $this->assertEquals(32, strlen($response1->getHeaderLine('X-CSRF-VALUE')), 'Length of the generated token value should be double the strength');
         $this->assertEquals(32, strlen($response2->getHeaderLine('X-CSRF-VALUE')), 'Length of the generated token value should be double the strength');
-
+        
         $this->assertTrue(ctype_xdigit($response1->getHeaderLine('X-CSRF-VALUE')), 'Generated token value is not hexadecimal');
         $this->assertTrue(ctype_xdigit($response2->getHeaderLine('X-CSRF-VALUE')), 'Generated token value is not hexadecimal');
     }
