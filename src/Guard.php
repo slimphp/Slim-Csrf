@@ -131,7 +131,7 @@ class Guard
     /**
      * Invoke middleware
      *
-     * @param  RequestInterface  $request  PSR7 request object
+     * @param  ServerRequestInterface  $request  PSR7 request object
      * @param  ResponseInterface $response PSR7 response object
      * @param  callable          $next     Next middleware callable
      *
@@ -185,9 +185,9 @@ class Guard
     /**
      * Generates a new CSRF token and attaches it to the Request Object
      * 
-     * @param  RequestInterface $request PSR7 response object.
+     * @param  ServerRequestInterface $request PSR7 response object.
      * 
-     * @return RequestInterface PSR7 response object.
+     * @return ServerRequestInterface PSR7 response object.
      */
     public function generateNewToken(ServerRequestInterface $request) {
         
@@ -208,7 +208,7 @@ class Guard
      *
      * @return bool
      */
-    protected function validateToken($name, $value)
+    public function validateToken($name, $value)
     {
         $token = $this->getFromStorage($name);
         if (function_exists('hash_equals')) {
