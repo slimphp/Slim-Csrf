@@ -10,10 +10,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
 /**
- * CSRF protection middleware based
- * on the OWASP example linked below.
- *
- * @link https://www.owasp.org/index.php/PHP_CSRF_Guard
+ * CSRF protection middleware.
  */
 class Guard
 {
@@ -49,7 +46,7 @@ class Guard
      *
      * @var int
      */
-     protected $strength = 16;
+     protected $strength;
 
     /**
      * Callable to be executed if the CSRF validation fails
@@ -76,15 +73,21 @@ class Guard
      * @param null|array|ArrayAccess $storage
      * @param null|callable          $failureCallable
      * @param integer                $storageLimit
+     * @param integer                $strength
      * @throws RuntimeException if the session cannot be found
      */
     public function __construct(
         $prefix = 'csrf',
         &$storage = null,
         callable $failureCallable = null,
-        $storageLimit = 200
+        $storageLimit = 200,
+        $strength = 16
     ) {
         $this->prefix = rtrim($prefix, '_');
+        if ($strength < 16) {
+            throw new RuntimeException('CSRF middleware failed. Minimum strength is 16.');
+        }
+        $this->strength = $strength;
         if (is_array($storage)) {
             $this->storage = &$storage;
         } elseif ($storage instanceof ArrayAccess) {
@@ -160,16 +163,14 @@ class Guard
     }
 
     /**
-     * Generates a new CSRF token and appends it to the request.
+     * Generates a new CSRF token
      *
-     * @param  RequestInterface $request PSR7 response object.
-     *
-     * @return RequestInterface PSR7 response object.
+     * @return array
      */
-    protected function generateNewToken(ServerRequestInterface $request)
+    public function generateToken()
     {
         // Generate new CSRF token
-        $name = $this->prefix . mt_rand(0, mt_getrandmax());
+        $name = uniqid($this->prefix);
         $value = $this->createToken();
         $this->saveToStorage($name, $value);
 
@@ -178,10 +179,24 @@ class Guard
             $this->prefix . '_value' => $value
         ];
 
-        $request = $request->withAttribute($this->prefix . '_name', $name)
-            ->withAttribute($this->prefix . '_value', $value);
+        return $this->keyPair;
+    }
+    
+    /**
+     * Generates a new CSRF token and attaches it to the Request Object
+     * 
+     * @param  RequestInterface $request PSR7 response object.
+     * 
+     * @return RequestInterface PSR7 response object.
+     */
+    public function generateNewToken(ServerRequestInterface $request) {
+        
+        $pair = $this->generateToken();
+        
+        $request = $request->withAttribute($this->prefix . '_name', $pair[$this->prefix . '_name'])
+            ->withAttribute($this->prefix . '_value', $pair[$this->prefix . '_value']);
 
-        return $request;
+        return $request;        
     }
 
     /**
@@ -213,38 +228,7 @@ class Guard
      */
     protected function createToken()
     {
-        $token = "";
-
-        if (function_exists("random_bytes")) {
-            $rawToken = random_bytes($this->strength);
-            if ($rawToken !== false) {
-                $token = bin2hex($token);
-            }
-        } elseif (function_exists("openssl_random_pseudo_bytes")) {
-            $rawToken = openssl_random_pseudo_bytes($this->strength);
-            if ($rawToken !== false) {
-                $token = bin2hex($token);
-            }
-        }
-
-        if ($token == "") {
-            if (function_exists("hash_algos") && in_array("sha512", hash_algos())) {
-                $token = hash("sha512", mt_rand(0, mt_getrandmax()));
-            } else {
-                $token = ' ';
-                for ($i = 0; $i < 128; ++$i) {
-                    $rVal = mt_rand(0, 35);
-                    if ($rVal < 26) {
-                        $cVal = chr(ord('a') + $rVal);
-                    } else {
-                        $cVal = chr(ord('0') + $rVal - 26);
-                    }
-                    $token .= $cVal;
-                }
-            }
-        }
-
-        return $token;
+        return bin2hex(random_bytes($this->strength));
     }
 
     /**

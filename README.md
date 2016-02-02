@@ -87,11 +87,11 @@ $app->get('/api/myEndPoint',function ($req, $res, $args) {
     ]
     
     return $response->write(json_encode($tokenArray));
-})->addMiddleware($container->get('csrf');
+})->add($container->get('csrf');
 
 $app->post('/api/myEndPoint',function ($req, $res, $args) {
     //Do my Things Securely!
-})->addMiddleware($container->get('csrf');
+})->add($container->get('csrf'));
 
 $app->run();
 ```
@@ -147,6 +147,7 @@ If you discover any security related issues, please email security@slimframework
 
 - [Josh Lockhart](https://github.com/codeguy)
 - [All Contributors](../../contributors)
+- Initial inspiration from [OWASP](https://www.owasp.org/index.php/PHP_CSRF_Guard)
 
 ## License
 
