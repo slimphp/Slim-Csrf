@@ -87,7 +87,7 @@ $app->get('/api/myEndPoint',function ($req, $res, $args) {
     ]
     
     return $response->write(json_encode($tokenArray));
-})->add($container->get('csrf');
+})->add($container->get('csrf'));
 
 $app->post('/api/myEndPoint',function ($req, $res, $args) {
     //Do my Things Securely!
