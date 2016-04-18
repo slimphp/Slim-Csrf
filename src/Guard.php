@@ -88,19 +88,7 @@ class Guard
             throw new RuntimeException('CSRF middleware failed. Minimum strength is 16.');
         }
         $this->strength = $strength;
-        if (is_array($storage)) {
-            $this->storage = &$storage;
-        } elseif ($storage instanceof ArrayAccess) {
-            $this->storage = $storage;
-        } else {
-            if (!isset($_SESSION)) {
-                throw new RuntimeException('CSRF middleware failed. Session not found.');
-            }
-            if (!array_key_exists($prefix, $_SESSION)) {
-                $_SESSION[$prefix] = [];
-            }
-            $this->storage = &$_SESSION[$prefix];
-        }
+        $this->storage = &$storage;
 
         $this->setFailureCallable($failureCallable);
         $this->setStorageLimit($storageLimit);
@@ -139,6 +127,8 @@ class Guard
      */
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, callable $next)
     {
+        $this->validateStorage();
+
         // Validate POST, PUT, DELETE, PATCH requests
         if (in_array($request->getMethod(), ['POST', 'PUT', 'DELETE', 'PATCH'])) {
             $body = $request->getParsedBody();
@@ -163,6 +153,29 @@ class Guard
     }
 
     /**
+     * @param $prefix
+     * @param $storage
+     * @return mixed
+     */
+    private function validateStorage()
+    {
+        if (is_array($this->storage)) {
+            return $this->storage;
+        } elseif ($this->storage instanceof ArrayAccess) {
+            return $this->storage;
+        } else {
+            if (!isset($_SESSION)) {
+                throw new RuntimeException('CSRF middleware failed. Session not found.');
+            }
+            if (!array_key_exists($this->prefix, $_SESSION)) {
+                $_SESSION[$this->prefix] = [];
+            }
+            $this->storage = &$_SESSION[$this->prefix];
+            return $this->storage;
+        }
+    }
+
+    /**
      * Generates a new CSRF token
      *
      * @return array
@@ -181,22 +194,22 @@ class Guard
 
         return $this->keyPair;
     }
-    
+
     /**
      * Generates a new CSRF token and attaches it to the Request Object
-     * 
+     *
      * @param  RequestInterface $request PSR7 response object.
-     * 
+     *
      * @return RequestInterface PSR7 response object.
      */
     public function generateNewToken(ServerRequestInterface $request) {
-        
+
         $pair = $this->generateToken();
-        
+
         $request = $request->withAttribute($this->prefix . '_name', $pair[$this->prefix . '_name'])
             ->withAttribute($this->prefix . '_value', $pair[$this->prefix . '_value']);
 
-        return $request;        
+        return $request;
     }
 
     /**
@@ -319,7 +332,7 @@ class Guard
         }
         return $this->failureCallable;
     }
-    
+
     /**
      * Setter for failureCallable
      *
