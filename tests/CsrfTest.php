@@ -176,6 +176,172 @@ class CsrfTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(1, count($storage));
     }
 
+    public function testPersistenceModeTrueBetweenRequestsArray()
+    {
+        $storage = [];
+
+        $mw = new Guard('csrf', $storage, null, 200, 16, true);
+
+        $next = function ($req, $res) {
+            return $res;
+        };
+
+        // Token name and value should be null if the storage is empty and middleware has not yet been invoked
+        $this->assertNull($mw->getTokenName());
+        $this->assertNull($mw->getTokenValue());        
+        
+        $response = $mw($this->request, $this->response, $next);
+
+        // Persistent token name and value have now been generated
+        $name = $mw->getTokenName();
+        $value = $mw->getTokenValue();        
+
+        // Subsequent request will attempt to validate the token
+        $request = $this->request
+                        ->withMethod('POST')
+                        ->withParsedBody([
+                            'csrf_name' => $name,
+                            'csrf_value' => $value
+                        ]);
+        $response = $mw($request, $this->response, $next);
+
+        // Token name and value should be the same after subsequent request
+        $this->assertEquals($name, $mw->getTokenName());
+        $this->assertEquals($value, $mw->getTokenValue());
+    }
+    
+    public function testPersistenceModeTrueBetweenRequestsArrayAccess()
+    {
+        $storage = new \ArrayObject();
+
+        $mw = new Guard('csrf', $storage, null, 200, 16, true);
+
+        $next = function ($req, $res) {
+            return $res;
+        };
+
+        // Token name and value should be null if the storage is empty and middleware has not yet been invoked
+        $this->assertNull($mw->getTokenName());
+        $this->assertNull($mw->getTokenValue());        
+        
+        $response = $mw($this->request, $this->response, $next);
+
+        // Persistent token name and value have now been generated
+        $name = $mw->getTokenName();
+        $value = $mw->getTokenValue();        
+
+        // Subsequent request will attempt to validate the token
+        $request = $this->request
+                        ->withMethod('POST')
+                        ->withParsedBody([
+                            'csrf_name' => $name,
+                            'csrf_value' => $value
+                        ]);
+        $response = $mw($request, $this->response, $next);
+        
+        // Token name and value should be the same after subsequent request
+        $this->assertEquals($name, $mw->getTokenName());
+        $this->assertEquals($value, $mw->getTokenValue());
+    }    
+    
+    public function testPersistenceModeFalseBetweenRequestsArray()
+    {
+        $storage = [];
+
+        $mw = new Guard('csrf', $storage);
+
+        $next = function ($req, $res) {
+            return $res;
+        };
+
+        // Token name and value should be null if the storage is empty and middleware has not yet been invoked
+        $this->assertNull($mw->getTokenName());
+        $this->assertNull($mw->getTokenValue());        
+        
+        $response = $mw($this->request, $this->response, $next);
+
+        // First token name and value have now been generated
+        $name = $mw->getTokenName();
+        $value = $mw->getTokenValue();        
+
+        // Subsequent request will attempt to validate the token
+        $request = $this->request
+                        ->withMethod('POST')
+                        ->withParsedBody([
+                            'csrf_name' => $name,
+                            'csrf_value' => $value
+                        ]);
+        $response = $mw($request, $this->response, $next);
+
+        // Token name and value should NOT be the same after subsequent request
+        $this->assertNotEquals($name, $mw->getTokenName());
+        $this->assertNotEquals($value, $mw->getTokenValue());
+    }
+    
+    public function testPersistenceModeFalseBetweenRequestsArrayAccess()
+    {
+        $storage = new \ArrayObject();
+
+        $mw = new Guard('csrf', $storage);
+
+        $next = function ($req, $res) {
+            return $res;
+        };
+
+        // Token name and value should be null if the storage is empty and middleware has not yet been invoked
+        $this->assertNull($mw->getTokenName());
+        $this->assertNull($mw->getTokenValue());        
+        
+        $response = $mw($this->request, $this->response, $next);
+
+        // First token name and value have now been generated
+        $name = $mw->getTokenName();
+        $value = $mw->getTokenValue();        
+
+        // Subsequent request will attempt to validate the token
+        $request = $this->request
+                        ->withMethod('POST')
+                        ->withParsedBody([
+                            'csrf_name' => $name,
+                            'csrf_value' => $value
+                        ]);
+        $response = $mw($request, $this->response, $next);
+
+        // Token name and value should NOT be the same after subsequent request
+        $this->assertNotEquals($name, $mw->getTokenName());
+        $this->assertNotEquals($value, $mw->getTokenValue());
+    }
+    
+    public function testUpdateAfterInvalidTokenWithPersistenceModeTrue()
+    {
+        $storage = [];
+
+        $mw = new Guard('csrf', $storage, null, 200, 16, true);
+
+        $next = function ($req, $res) {
+            return $res;
+        };
+
+        $response = $mw($this->request, $this->response, $next);
+
+        // Persistent token name and value have now been generated
+        $name = $mw->getTokenName();
+        $value = $mw->getTokenValue();
+
+        // Bad request, token should get updated
+        $request = $this->request
+                        ->withMethod('POST')
+                        ->withParsedBody([
+                            'csrf_name' => 'csrf_123',
+                            'csrf_value' => 'xyz'
+                        ]);        
+        $response = $mw($request, $this->response, $next);
+
+        // Token name and value should NOT be the same after subsequent request
+        $this->assertNotEquals($name, $mw->getTokenName());
+        $this->assertNotEquals($value, $mw->getTokenValue());
+    }    
+    
     public function testStorageLimitIsEnforcedForObjects()
     {
         $storage = new \ArrayObject();
