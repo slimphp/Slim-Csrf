@@ -285,8 +285,9 @@ class Guard
             return null;
         }
 
-        $value = end($this->storage);
-        $name = key($this->storage);
+        foreach ($this->storage as $name => $value) {
+            continue;
+        }
 
         $keyPair = [
             $this->prefix . '_name' => $name,
