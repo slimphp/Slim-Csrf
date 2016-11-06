@@ -40,12 +40,12 @@ $container['csrf'] = function ($c) {
 // If you are implementing per-route checks you must not add this
 $app->add($container->get('csrf'));
 
-$app->get('/foo', function ($req, $res, $args) {
+$app->get('/foo', function ($request, $response, $args) {
     // CSRF token name and value
     $nameKey = $this->csrf->getTokenNameKey();
     $valueKey = $this->csrf->getTokenValueKey();
-    $name = $req->getAttribute($nameKey);
-    $value = $req->getAttribute($valueKey);
+    $name = $request->getAttribute($nameKey);
+    $value = $request->getAttribute($valueKey);
 
     // Render HTML form which POSTs to /bar with two hidden input fields for the
     // name and value:
@@ -53,7 +53,7 @@ $app->get('/foo', function ($req, $res, $args) {
     // <input type="hidden" name="<?= $valueKey ?>" value="<?= $value ?>">
 });
 
-$app->post('/bar', function ($req, $res, $args) {
+$app->post('/bar', function ($request, $response, $args) {
     // CSRF protection successful if you reached
     // this far.
 });
@@ -75,11 +75,11 @@ $container['csrf'] = function ($c) {
     return new \Slim\Csrf\Guard;
 };
 
-$app->get('/api/myEndPoint',function ($req, $res, $args) {
+$app->get('/api/myEndPoint',function ($request, $response, $args) {
     $nameKey = $this->csrf->getTokenNameKey();
     $valueKey = $this->csrf->getTokenValueKey();
-    $name = $req->getAttribute($nameKey);
-    $value = $req->getAttribute($valueKey);
+    $name = $request->getAttribute($nameKey);
+    $value = $request->getAttribute($valueKey);
 
     $tokenArray = [
         $nameKey => $name,
@@ -89,7 +89,7 @@ $app->get('/api/myEndPoint',function ($req, $res, $args) {
     return $response->write(json_encode($tokenArray));
 })->add($container->get('csrf'));
 
-$app->post('/api/myEndPoint',function ($req, $res, $args) {
+$app->post('/api/myEndPoint',function ($request, $response, $args) {
     //Do my Things Securely!
 })->add($container->get('csrf'));
 
