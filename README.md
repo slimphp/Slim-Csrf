@@ -133,6 +133,11 @@ class CsrfExtension extends \Twig_Extension
             ]
         ];
     }
+
+    public function getName()
+    {
+        return 'slim/csrf';
+    }
 }
 ```
 
