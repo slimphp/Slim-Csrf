@@ -122,6 +122,60 @@ By default, `Slim\Csrf\Guard` will generate a fresh name/value pair after each r
 
 To use persistent tokens, set the sixth parameter of the constructor to `true`.  No matter what, the token will be regenerated after a failed CSRF check.  In this case, you will probably want to detect this condition and instruct your users to reload the page in their legitimate browser tab (or automatically reload on the next failed request).
 
+
+### Accessing the token pair in templates (Twig, etc)
+
+In many situations, you will want to access the token pair without needing to go through the request object.  In these cases, you can use `getTokenName()` and `getTokenValue()` directly on the `Guard` middleware instance.  This can be useful, for example in a [Twig extension](http://twig.sensiolabs.org/doc/advanced.html#creating-an-extension):
+
+```php
+class CsrfExtension extends \Twig_Extension
+{
+
+    /**
+     * @var \Slim\Csrf\Guard
+     */
+    protected $csrf;
+    
+    public function __construct(\Slim\Csrf\Guard $csrf)
+    {
+        $this->csrf = $csrf;
+    }
+
+    public function getGlobals()
+    {
+        // CSRF token name and value
+        $csrfNameKey = $this->csrf->getTokenNameKey();
+        $csrfValueKey = $this->csrf->getTokenValueKey();
+        $csrfName = $this->csrf->getTokenName();
+        $csrfValue = $this->csrf->getTokenValue();
+        
+        return [
+            'csrf'   => [
+                'keys' => [
+                    'name'  => $csrfNameKey,
+                    'value' => $csrfValueKey
+                ],
+                'name'  => $csrfName,
+                'value' => $csrfValue
+            ]
+        ];
+    }
+
+    public function getName()
+    {
+        return 'slim/csrf';
+    }
+}
+```
+
+Once you have registered your extension, you may access the token pair in any template:
+
+```twig
+<input type="hidden" name="{{csrf.keys.name}}" value="{{csrf.name}}">
+<input type="hidden" name="{{csrf.keys.value}}" value="{{csrf.value}}">
+```
+
+
 ## Handling validation failure
 
 By default, `Slim\Csrf\Guard` will return a Response with a 400 status code and
