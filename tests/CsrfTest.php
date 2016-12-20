@@ -393,4 +393,17 @@ class CsrfTest extends \PHPUnit_Framework_TestCase
 
         $this->assertNotNull($mw->getTokenValue());
     }
+
+    public function testDefaultStorageIsSession()
+    {
+        $sessionBackup = $_SESSION;
+        $_SESSION = array();
+
+        $mw = new Guard('csrf');
+        $mw->validateStorage();
+
+        $this->assertNotEmpty($_SESSION);
+
+        $_SESSION = $sessionBackup;
+    }
 }

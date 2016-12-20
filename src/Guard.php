@@ -172,22 +172,24 @@ class Guard
      * @param $storage
      * @return mixed
      */
-    private function validateStorage()
+    public function validateStorage()
     {
         if (is_array($this->storage)) {
             return $this->storage;
-        } elseif ($this->storage instanceof ArrayAccess) {
-            return $this->storage;
-        } else {
-            if (!isset($_SESSION)) {
-                throw new RuntimeException('CSRF middleware failed. Session not found.');
-            }
-            if (!array_key_exists($this->prefix, $_SESSION)) {
-                $_SESSION[$this->prefix] = [];
-            }
-            $this->storage = &$_SESSION[$this->prefix];
+        }
+
+        if ($this->storage instanceof ArrayAccess) {
             return $this->storage;
         }
+
+        if (!isset($_SESSION)) {
+            throw new RuntimeException('CSRF middleware failed. Session not found.');
+        }
+        if (!array_key_exists($this->prefix, $_SESSION)) {
+            $_SESSION[$this->prefix] = [];
+        }
+        $this->storage = &$_SESSION[$this->prefix];
+        return $this->storage;
     }
 
     /**
