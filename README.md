@@ -96,6 +96,26 @@ $app->post('/api/myEndPoint',function ($request, $response, $args) {
 $app->run();
 ```
 
+### Manual usage
+
+If you are willing to use `Slim\Csrf\Guard` outside a `Slim\App` or not as a middleware, be careful to validate the storage:
+
+```php
+// Start PHP session
+session_start();
+
+$slimGuard = new \Slim\Csrf\Guard;
+$slimGuard->validateStorage();
+
+// Generate new tokens
+$csrfNameKey = $slimGuard->getTokenNameKey();
+$csrfValueKey = $slimGuard->getTokenValueKey();
+$keyPair = $slimGuard->generateToken();
+
+// Validate retrieved tokens
+$slimGuard->validateToken($_POST[$csrfNameKey], $_POST[$csrfValueKey]);
+```
+
 ## Token persistence
 
 By default, `Slim\Csrf\Guard` will generate a fresh name/value pair after each request.  This is an important security measure for [certain situations](http://blog.ircmaxell.com/2013/02/preventing-csrf-attacks.html).  However, in many cases this is unnecessary, and [a single token throughout the user's session will suffice](https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)_Prevention_Cheat_Sheet#Synchronizer_.28CSRF.29_Tokens).  By using per-session requests it becomes easier, for example, to process AJAX requests without having to retrieve a new CSRF token (by reloading the page or making a separate request) after each request.  See issue #49.
