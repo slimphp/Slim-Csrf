@@ -159,6 +159,9 @@ class Guard
         // Generate new CSRF token if persistentTokenMode is false, or if a valid keyPair has not yet been stored
         if (!$this->persistentTokenMode || !$this->loadLastKeyPair()) {
             $request = $this->generateNewToken($request);
+        } elseif ($this->persistentTokenMode) {
+            $pair = $this->loadLastKeyPair() ? $this->keyPair : $this->generateToken();
+            $request = $this->attachRequestAttributes($request, $pair);
         }
 
         // Enforce the storage limit
@@ -219,14 +222,14 @@ class Guard
      * 
      * @return ServerRequestInterface PSR7 response object.
      */
-    public function generateNewToken(ServerRequestInterface $request) {
+    public function generateNewToken(ServerRequestInterface $request)
+    {
         
         $pair = $this->generateToken();
-        
-        $request = $request->withAttribute($this->prefix . '_name', $pair[$this->prefix . '_name'])
-            ->withAttribute($this->prefix . '_value', $pair[$this->prefix . '_value']);
 
-        return $request;        
+        $request = $this->attachRequestAttributes($request, $pair);
+
+        return $request;
     }
 
     /**
@@ -375,6 +378,17 @@ class Guard
                 unset($this->storage[$iterator->key()]);
             }
         }
+    }
+
+    /**
+     * @param ServerRequestInterface $request
+     * @param $pair
+     * @return static
+     */
+    protected function attachRequestAttributes(ServerRequestInterface $request, $pair)
+    {
+        return $request->withAttribute($this->prefix . '_name', $pair[$this->prefix . '_name'])
+            ->withAttribute($this->prefix . '_value', $pair[$this->prefix . '_value']);
     }
 
     /**

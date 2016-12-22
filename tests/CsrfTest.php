@@ -182,7 +182,10 @@ class CsrfTest extends \PHPUnit_Framework_TestCase
 
         $mw = new Guard('csrf', $storage, null, 200, 16, true);
 
-        $next = function ($req, $res) {
+        $next = function ($req, $res) use ($mw) {
+            // Token name and value should be accessible in the middleware as request attributes
+            $this->assertEquals($mw->getTokenName(), $req->getAttribute('csrf_name'));
+            $this->assertEquals($mw->getTokenValue(), $req->getAttribute('csrf_value'));
             return $res;
         };
 
@@ -216,7 +219,10 @@ class CsrfTest extends \PHPUnit_Framework_TestCase
 
         $mw = new Guard('csrf', $storage, null, 200, 16, true);
 
-        $next = function ($req, $res) {
+        $next = function ($req, $res) use ($mw) {
+            // Token name and value should be accessible in the middleware as request attributes
+            $this->assertEquals($mw->getTokenName(), $req->getAttribute('csrf_name'));
+            $this->assertEquals($mw->getTokenValue(), $req->getAttribute('csrf_value'));
             return $res;
         };
 
@@ -250,7 +256,10 @@ class CsrfTest extends \PHPUnit_Framework_TestCase
 
         $mw = new Guard('csrf', $storage);
 
-        $next = function ($req, $res) {
+        $next = function ($req, $res) use ($mw) {
+            // Token name and value should be accessible in the middleware as request attributes
+            $this->assertEquals($mw->getTokenName(), $req->getAttribute('csrf_name'));
+            $this->assertEquals($mw->getTokenValue(), $req->getAttribute('csrf_value'));
             return $res;
         };
 
@@ -284,7 +293,10 @@ class CsrfTest extends \PHPUnit_Framework_TestCase
 
         $mw = new Guard('csrf', $storage);
 
-        $next = function ($req, $res) {
+        $next = function ($req, $res) use ($mw) {
+            // Token name and value should be accessible in the middleware as request attributes
+            $this->assertEquals($mw->getTokenName(), $req->getAttribute('csrf_name'));
+            $this->assertEquals($mw->getTokenValue(), $req->getAttribute('csrf_value'));
             return $res;
         };
 
