@@ -83,6 +83,7 @@ class Guard
      * @param null|callable          $failureCallable
      * @param integer                $storageLimit
      * @param integer                $strength
+     * @param boolean                $persistentTokenMode
      * @throws RuntimeException if the session cannot be found
      */
     public function __construct(
