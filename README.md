@@ -128,7 +128,7 @@ To use persistent tokens, set the sixth parameter of the constructor to `true`. 
 In many situations, you will want to access the token pair without needing to go through the request object.  In these cases, you can use `getTokenName()` and `getTokenValue()` directly on the `Guard` middleware instance.  This can be useful, for example in a [Twig extension](http://twig.sensiolabs.org/doc/advanced.html#creating-an-extension):
 
 ```php
-class CsrfExtension extends \Twig_Extension
+class CsrfExtension extends \Twig_Extension implements Twig_Extension_GlobalsInterface
 {
 
     /**
