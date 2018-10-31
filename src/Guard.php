@@ -105,8 +105,6 @@ class Guard
         $this->setStorageLimit($storageLimit);
 
         $this->setPersistentTokenMode($persistentTokenMode);
-
-        $this->keyPair = null;
     }
 
     /**
