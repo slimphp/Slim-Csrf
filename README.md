@@ -84,7 +84,7 @@ $app->get('/api/myEndPoint',function ($request, $response, $args) {
     $tokenArray = [
         $nameKey => $name,
         $valueKey => $value
-    ]
+    ];
     
     return $response->write(json_encode($tokenArray));
 })->add($container->get('csrf'));
