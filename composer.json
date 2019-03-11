@@ -3,13 +3,13 @@
     "type": "library",
     "description": "Slim Framework 3 CSRF protection middleware",
     "keywords": ["slim","framework","middleware","csrf"],
-    "homepage": "http://slimframework.com",
+    "homepage": "https://www.slimframework.com/",
     "license": "MIT",
     "authors": [
         {
             "name": "Josh Lockhart",
             "email": "hello@joshlockhart.com",
-            "homepage": "http://joshlockhart.com"
+            "homepage": "https://joshlockhart.com/"
         }
     ],
     "require": {

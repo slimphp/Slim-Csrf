@@ -118,14 +118,14 @@ $slimGuard->validateToken($_POST[$csrfNameKey], $_POST[$csrfValueKey]);
 
 ## Token persistence
 
-By default, `Slim\Csrf\Guard` will generate a fresh name/value pair after each request.  This is an important security measure for [certain situations](http://blog.ircmaxell.com/2013/02/preventing-csrf-attacks.html).  However, in many cases this is unnecessary, and [a single token throughout the user's session will suffice](https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)_Prevention_Cheat_Sheet#Synchronizer_.28CSRF.29_Tokens).  By using per-session requests it becomes easier, for example, to process AJAX requests without having to retrieve a new CSRF token (by reloading the page or making a separate request) after each request.  See issue #49.
+By default, `Slim\Csrf\Guard` will generate a fresh name/value pair after each request.  This is an important security measure for [certain situations](https://blog.ircmaxell.com/2013/02/preventing-csrf-attacks.html).  However, in many cases this is unnecessary, and [a single token throughout the user's session will suffice](https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)_Prevention_Cheat_Sheet#Synchronizer_.28CSRF.29_Tokens).  By using per-session requests it becomes easier, for example, to process AJAX requests without having to retrieve a new CSRF token (by reloading the page or making a separate request) after each request.  See issue #49.
 
 To use persistent tokens, set the sixth parameter of the constructor to `true`.  No matter what, the token will be regenerated after a failed CSRF check.  In this case, you will probably want to detect this condition and instruct your users to reload the page in their legitimate browser tab (or automatically reload on the next failed request).
 
 
 ### Accessing the token pair in templates (Twig, etc)
 
-In many situations, you will want to access the token pair without needing to go through the request object.  In these cases, you can use `getTokenName()` and `getTokenValue()` directly on the `Guard` middleware instance.  This can be useful, for example in a [Twig extension](http://twig.sensiolabs.org/doc/advanced.html#creating-an-extension):
+In many situations, you will want to access the token pair without needing to go through the request object.  In these cases, you can use `getTokenName()` and `getTokenValue()` directly on the `Guard` middleware instance.  This can be useful, for example in a [Twig extension](https://twig.sensiolabs.org/doc/advanced.html#creating-an-extension):
 
 ```php
 class CsrfExtension extends \Twig_Extension implements Twig_Extension_GlobalsInterface
