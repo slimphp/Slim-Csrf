@@ -1,6 +1,7 @@
 <?php
 namespace Slim\HttpCache\Tests;
 
+use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\Body;
@@ -12,7 +13,7 @@ use Slim\Http\Response;
 use Slim\Http\Uri;
 use Slim\Csrf\Guard;
 
-class CsrfTest extends \PHPUnit_Framework_TestCase
+class CsrfTest extends TestCase
 {
     /**
      * PSR7 request object
