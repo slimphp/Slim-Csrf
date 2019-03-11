@@ -1,5 +1,9 @@
 # Change Log
 
+## 2019-03-11
+
+- Changed minimum PHP version to 7.1
+
 ## 2016-08-14
 
 Now supports "persistence mode", to persist a single CSRF name/value pair throughout the life of a user's session.  Added the following methods:
