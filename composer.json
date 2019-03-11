@@ -13,13 +13,13 @@
         }
     ],
     "require": {
-        "php": ">=5.5.0",
+        "php": "^7.1",
         "psr/http-message": "^1.0",
         "paragonie/random_compat": "^1.1|^2.0|^9.99"
     },
     "require-dev": {
         "slim/slim": "~3.0",
-        "phpunit/phpunit": "^4.0"
+        "phpunit/phpunit": "^7.0"
     },
     "autoload": {
         "psr-4": {
