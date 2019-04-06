@@ -189,7 +189,7 @@ class Guard
         if (!isset($_SESSION)) {
             throw new RuntimeException('CSRF middleware failed. Session not found.');
         }
-        if (!array_key_exists($this->prefix, $_SESSION)) {
+        if (!array_key_exists($this->prefix, $_SESSION) || !\is_array($_SESSION[$this->prefix])) {
             $_SESSION[$this->prefix] = [];
         }
         $this->storage = &$_SESSION[$this->prefix];
