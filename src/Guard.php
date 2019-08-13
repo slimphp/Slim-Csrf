@@ -146,6 +146,12 @@ class Guard
         if (in_array($request->getMethod(), ['POST', 'PUT', 'DELETE', 'PATCH'])) {
             $body = $request->getParsedBody();
             $body = $body ? (array)$body : [];
+            
+            if( empty($body) ) {
+                $body = $request->getBody();
+                $body = $body ? (array)json_decode($body) : [];
+            }
+            
             $name = isset($body[$this->prefix . '_name']) ? $body[$this->prefix . '_name'] : false;
             $value = isset($body[$this->prefix . '_value']) ? $body[$this->prefix . '_value'] : false;
             if (!$name || !$value || !$this->validateToken($name, $value)) {
