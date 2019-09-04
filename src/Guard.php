@@ -1,8 +1,14 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Slim\Csrf;
 
 use ArrayAccess;
 use Countable;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
+use Slim\Factory\AppFactory;
 use Traversable;
 use IteratorAggregate;
 use RuntimeException;
@@ -12,7 +18,7 @@ use Psr\Http\Message\ResponseInterface;
 /**
  * CSRF protection middleware.
  */
-class Guard
+class Guard implements MiddlewareInterface
 {
     /**
      * Prefix for CSRF parameters (omit trailing "_" underscore)
@@ -46,7 +52,7 @@ class Guard
      *
      * @var int
      */
-     protected $strength;
+    protected $strength;
 
     /**
      * Callable to be executed if the CSRF validation fails
@@ -87,12 +93,12 @@ class Guard
      * @throws RuntimeException if the session cannot be found
      */
     public function __construct(
-        $prefix = 'csrf',
+        string $prefix = 'csrf',
         &$storage = null,
         callable $failureCallable = null,
-        $storageLimit = 200,
-        $strength = 16,
-        $persistentTokenMode = false
+        int $storageLimit = 200,
+        int $strength = 16,
+        bool $persistentTokenMode = false
     ) {
         $this->prefix = rtrim($prefix, '_');
         if ($strength < 16) {
@@ -114,7 +120,7 @@ class Guard
      *
      * @return string
      */
-    public function getTokenNameKey()
+    public function getTokenNameKey(): string
     {
         return $this->prefix . '_name';
     }
@@ -124,7 +130,7 @@ class Guard
      *
      * @return string
      */
-    public function getTokenValueKey()
+    public function getTokenValueKey(): string
     {
         return $this->prefix . '_value';
     }
@@ -132,13 +138,12 @@ class Guard
     /**
      * Invoke middleware
      *
-     * @param  ServerRequestInterface  $request  PSR7 request object
-     * @param  ResponseInterface $response PSR7 response object
-     * @param  callable          $next     Next middleware callable
+     * @param ServerRequestInterface $request PSR7 request object
+     * @param RequestHandlerInterface $handler
      *
      * @return ResponseInterface PSR7 response object
      */
-    public function __invoke(ServerRequestInterface $request, ResponseInterface $response, callable $next)
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $this->validateStorage();
 
@@ -146,14 +151,14 @@ class Guard
         if (in_array($request->getMethod(), ['POST', 'PUT', 'DELETE', 'PATCH'])) {
             $body = $request->getParsedBody();
             $body = $body ? (array)$body : [];
-            $name = isset($body[$this->prefix . '_name']) ? $body[$this->prefix . '_name'] : false;
-            $value = isset($body[$this->prefix . '_value']) ? $body[$this->prefix . '_value'] : false;
+            $name = $body[$this->prefix . '_name'] ?? false;
+            $value = $body[$this->prefix . '_value'] ?? false;
             if (!$name || !$value || !$this->validateToken($name, $value)) {
                 // Need to regenerate a new token, as the validateToken removed the current one.
                 $request = $this->generateNewToken($request);
 
                 $failureCallable = $this->getFailureCallable();
-                return $failureCallable($request, $response, $next);
+                return $failureCallable($request, $handler);
             }
         }
 
@@ -168,12 +173,10 @@ class Guard
         // Enforce the storage limit
         $this->enforceStorageLimit();
 
-        return $next($request, $response);
+        return $handler->handle($request);
     }
 
     /**
-     * @param $prefix
-     * @param $storage
      * @return mixed
      */
     public function validateStorage()
@@ -201,7 +204,7 @@ class Guard
      *
      * @return array
      */
-    public function generateToken()
+    public function generateToken(): array
     {
         // Generate new CSRF token
         $name = uniqid($this->prefix);
@@ -218,14 +221,13 @@ class Guard
     
     /**
      * Generates a new CSRF token and attaches it to the Request Object
-     * 
+     *
      * @param  ServerRequestInterface $request PSR7 response object.
-     * 
+     *
      * @return ServerRequestInterface PSR7 response object.
      */
-    public function generateNewToken(ServerRequestInterface $request)
+    public function generateNewToken(ServerRequestInterface $request): ServerRequestInterface
     {
-        
         $pair = $this->generateToken();
 
         $request = $this->attachRequestAttributes($request, $pair);
@@ -242,7 +244,7 @@ class Guard
      *
      * @return bool
      */
-    public function validateToken($name, $value)
+    public function validateToken(string $name, string $value): bool
     {
         $token = $this->getFromStorage($name);
         if (function_exists('hash_equals')) {
@@ -264,7 +266,7 @@ class Guard
      *
      * @return string
      */
-    protected function createToken()
+    protected function createToken(): string
     {
         return bin2hex(random_bytes($this->strength));
     }
@@ -275,7 +277,7 @@ class Guard
      * @param  string $name  CSRF token name
      * @param  string $value CSRF token value
      */
-    protected function saveToStorage($name, $value)
+    protected function saveToStorage(string $name, string $value): void
     {
         $this->storage[$name] = $value;
     }
@@ -287,17 +289,17 @@ class Guard
      *
      * @return string|bool CSRF token value or `false` if not present
      */
-    protected function getFromStorage($name)
+    protected function getFromStorage(string $name)
     {
-        return isset($this->storage[$name]) ? $this->storage[$name] : false;
+        return $this->storage[$name] ?? false;
     }
 
     /**
      * Get the most recent key pair from storage.
      *
      * @return string[]|null Array containing name and value if found, null otherwise
-     */    
-    protected function getLastKeyPair()
+     */
+    protected function getLastKeyPair(): ?array
     {
         // Use count, since empty ArrayAccess objects can still return false for `empty`
         if (count($this->storage) < 1) {
@@ -321,7 +323,7 @@ class Guard
      *
      * @return bool `true` if there was a key pair to load in storage, false otherwise.
      */
-    protected function loadLastKeyPair()
+    protected function loadLastKeyPair(): bool
     {
         $this->keyPair = $this->getLastKeyPair();
 
@@ -337,7 +339,7 @@ class Guard
      *
      * @param  string $name CSRF token name
      */
-    protected function removeFromStorage($name)
+    protected function removeFromStorage(string $name): void
     {
         $this->storage[$name] = ' ';
         unset($this->storage[$name]);
@@ -350,7 +352,7 @@ class Guard
      * This is required as a token is generated every request and so
      * most will never be used.
      */
-    protected function enforceStorageLimit()
+    protected function enforceStorageLimit(): void
     {
         if ($this->storageLimit < 1) {
             return;
@@ -371,7 +373,7 @@ class Guard
             // array_shift() doesn't work for ArrayAccess, so we need an iterator in order to use rewind()
             // and key(), so that we can then unset
             $iterator = $this->storage;
-            if ($this->storage instanceof \IteratorAggregate) {
+            if ($this->storage instanceof IteratorAggregate) {
                 $iterator = $this->storage->getIterator();
             }
             while (count($this->storage) > $this->storageLimit) {
@@ -384,9 +386,9 @@ class Guard
     /**
      * @param ServerRequestInterface $request
      * @param $pair
-     * @return static
+     * @return ServerRequestInterface
      */
-    protected function attachRequestAttributes(ServerRequestInterface $request, $pair)
+    protected function attachRequestAttributes(ServerRequestInterface $request, array $pair): ServerRequestInterface
     {
         return $request->withAttribute($this->prefix . '_name', $pair[$this->prefix . '_name'])
             ->withAttribute($this->prefix . '_value', $pair[$this->prefix . '_value']);
@@ -400,8 +402,13 @@ class Guard
     public function getFailureCallable()
     {
         if (is_null($this->failureCallable)) {
-            $this->failureCallable = function (ServerRequestInterface $request, ResponseInterface $response, $next) {
-                $body = new \Slim\Http\Body(fopen('php://temp', 'r+'));
+            $this->failureCallable = function (
+                ServerRequestInterface $request,
+                RequestHandlerInterface $handler
+            ): ResponseInterface {
+                $responseFactory = AppFactory::determineResponseFactory();
+                $response = $responseFactory->createResponse();
+                $body = $response->getBody();
                 $body->write('Failed CSRF check!');
                 return $response->withStatus(400)->withHeader('Content-type', 'text/plain')->withBody($body);
             };
@@ -415,7 +422,7 @@ class Guard
      * @param mixed $failureCallable Value to set
      * @return $this
      */
-    public function setFailureCallable($failureCallable)
+    public function setFailureCallable($failureCallable): self
     {
         $this->failureCallable = $failureCallable;
         return $this;
@@ -424,11 +431,11 @@ class Guard
     /**
      * Setter for persistentTokenMode
      *
-     * @param bool $persistentTokenMode True to use the same token throughout the session (unless there is a validation error),
-     * false to get a new token with each request.
+     * @param bool $persistentTokenMode True to use the same token throughout the session
+     * (unless there is a validation error), false to get a new token with each request.
      * @return $this
      */
-    public function setPersistentTokenMode($persistentTokenMode)
+    public function setPersistentTokenMode(bool $persistentTokenMode): self
     {
         $this->persistentTokenMode = $persistentTokenMode;
         return $this;
@@ -440,7 +447,7 @@ class Guard
      * @param integer $storageLimit Value to set
      * @return $this
      */
-    public function setStorageLimit($storageLimit)
+    public function setStorageLimit(int $storageLimit): self
     {
         $this->storageLimit = (int)$storageLimit;
         return $this;
@@ -451,7 +458,7 @@ class Guard
      *
      * @return bool
      */
-    public function getPersistentTokenMode()
+    public function getPersistentTokenMode(): bool
     {
         return $this->persistentTokenMode;
     }
@@ -459,16 +466,16 @@ class Guard
     /**
      * @return string
      */
-    public function getTokenName()
+    public function getTokenName(): ?string
     {
-        return isset($this->keyPair[$this->getTokenNameKey()]) ? $this->keyPair[$this->getTokenNameKey()] : null;
+        return $this->keyPair[$this->getTokenNameKey()] ?? null;
     }
 
     /**
      * @return string
      */
-    public function getTokenValue()
+    public function getTokenValue(): ?string
     {
-        return isset($this->keyPair[$this->getTokenValueKey()]) ? $this->keyPair[$this->getTokenValueKey()] : null;
+        return $this->keyPair[$this->getTokenValueKey()] ?? null;
     }
 }
