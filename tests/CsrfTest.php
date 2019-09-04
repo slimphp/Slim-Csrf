@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Slim\HttpCache\Tests;
+namespace Slim\Tests\Csrf;
 
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
