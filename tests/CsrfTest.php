@@ -46,8 +46,10 @@ class CsrfTest extends TestCase
 
     /**
      * Run before each test
+     *
+     * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         $uri = (new UriFactory())->createUri('https://example.com:443/foo/bar?abc=123');
         $headers = new Headers();
