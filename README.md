@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/slimphp/Slim-Csrf.svg?branch=master)](https://travis-ci.org/slimphp/Slim-Csrf)
 
-This repository contains a Slim Framework CSRF protection middleware. CSRF protection applies to all unsafe HTTP requests (POST, PUT, DELETE, PATCH).
+This repository contains a Slim Framework CSRF protection PSR-15 middleware. CSRF protection applies to all unsafe HTTP requests (POST, PUT, DELETE, PATCH).
 
 You can fetch the latest CSRF token's name and value from the Request object with its `getAttribute()` method. By default, the CSRF token's name is stored in the `csrf_name` attribute, and the CSRF token's value is stored in the `csrf_value` attribute.
 
@@ -14,7 +14,7 @@ Via Composer
 $ composer require slim/csrf
 ```
 
-Requires Slim 3.0.0 or newer.
+Requires Slim 4.0.0 or newer.
 
 ## Usage
 
@@ -28,13 +28,17 @@ as it is middleware, you can also register it for a subset of routes.
 // Start PHP session
 session_start();
 
-$app = new \Slim\App();
+// Create Container
+$container = new Container();
+AppFactory::setContainer($container);
+
+$app = AppFactory::create();
 
 // Register with container
 $container = $app->getContainer();
-$container['csrf'] = function ($c) {
+$container->set('csrf', function (ContainerInterface $container) {
     return new \Slim\Csrf\Guard;
-};
+});
 
 // Register middleware for all routes
 // If you are implementing per-route checks you must not add this
@@ -67,13 +71,19 @@ $app->run();
 // Start PHP session
 session_start();
 
-$app = new \Slim\App();
+// Create Container
+$container = new Container();
+AppFactory::setContainer($container);
+
+$app = AppFactory::create();
 
 // Register with container
 $container = $app->getContainer();
-$container['csrf'] = function ($c) {
+$container->set('csrf', function (ContainerInterface $container) {
     return new \Slim\Csrf\Guard;
-};
+});
+
+$app = new \Slim\App();
 
 $app->get('/api/myEndPoint',function ($request, $response, $args) {
     $nameKey = $this->csrf->getTokenNameKey();
@@ -125,12 +135,11 @@ To use persistent tokens, set the sixth parameter of the constructor to `true`. 
 
 ### Accessing the token pair in templates (Twig, etc)
 
-In many situations, you will want to access the token pair without needing to go through the request object.  In these cases, you can use `getTokenName()` and `getTokenValue()` directly on the `Guard` middleware instance.  This can be useful, for example in a [Twig extension](http://twig.sensiolabs.org/doc/advanced.html#creating-an-extension):
+In many situations, you will want to access the token pair without needing to go through the request object.  In these cases, you can use `getTokenName()` and `getTokenValue()` directly on the `Guard` middleware instance.  This can be useful, for example in a [Twig extension](https://twig.symfony.com/doc/2.x/advanced.html#creating-an-extension):
 
 ```php
-class CsrfExtension extends \Twig_Extension implements Twig_Extension_GlobalsInterface
+class CsrfExtension extends \Twig\Extension\AbstractExtension implements \Twig\Extension\GlobalsInterface
 {
-
     /**
      * @var \Slim\Csrf\Guard
      */
@@ -160,11 +169,6 @@ class CsrfExtension extends \Twig_Extension implements Twig_Extension_GlobalsInt
             ]
         ];
     }
-
-    public function getName()
-    {
-        return 'slim/csrf';
-    }
 }
 ```
 
@@ -183,16 +187,16 @@ a simple plain text error message.
 
 To override this, provide a callable as the third parameter to the constructor
 or via `setFailureCallable()`. This callable has the same signature as
-middleware: `function($request, $response, $next)` and must return a Response.
+middleware: `function($request, $handler)` and must return a Response.
 
 For example:
 
 ```php
-$container['csrf'] = function ($c) {
+$container->set('csrf', function (ContainerInterface $container) {
     $guard = new \Slim\Csrf\Guard();
-    $guard->setFailureCallable(function ($request, $response, $next) {
+    $guard->setFailureCallable(function (ServerRequestInterface $request, RequestHandlerInterface $handler) {
         $request = $request->withAttribute("csrf_status", false);
-        return $next($request, $response);
+        return $handler->handle($request);
     });
     return $guard;
 };
