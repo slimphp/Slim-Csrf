@@ -25,6 +25,12 @@ as it is middleware, you can also register it for a subset of routes.
 ### Register for all routes
 
 ```php
+use DI\Container;
+use Slim\Csrf\Guard;
+use Slim\Factory\AppFactory;
+
+require __DIR__ . '/vendor/autoload.php';
+
 // Start PHP session
 session_start();
 
@@ -36,8 +42,8 @@ $app = AppFactory::create();
 
 // Register with container
 $container = $app->getContainer();
-$container->set('csrf', function (ContainerInterface $container) {
-    return new \Slim\Csrf\Guard;
+$container->set('csrf', function (Container $c) {
+    return new Guard();
 });
 
 // Register middleware for all routes
@@ -68,6 +74,12 @@ $app->run();
 ### Register per route
 
 ```php
+use DI\Container;
+use Slim\Csrf\Guard;
+use Slim\Factory\AppFactory;
+
+require __DIR__ . '/vendor/autoload.php';
+
 // Start PHP session
 session_start();
 
@@ -79,8 +91,8 @@ $app = AppFactory::create();
 
 // Register with container
 $container = $app->getContainer();
-$container->set('csrf', function (ContainerInterface $container) {
-    return new \Slim\Csrf\Guard;
+$container->set('csrf', function (Container $c) {
+    return new Guard();
 });
 
 $app = new \Slim\App();
@@ -114,7 +126,7 @@ If you are willing to use `Slim\Csrf\Guard` outside a `Slim\App` or not as a mid
 // Start PHP session
 session_start();
 
-$slimGuard = new \Slim\Csrf\Guard;
+$slimGuard = new \Slim\Csrf\Guard();
 $slimGuard->validateStorage();
 
 // Generate new tokens
