@@ -10,61 +10,9 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Slim\Csrf\Guard;
 use Slim\MiddlewareDispatcher;
-use Slim\Psr7\Environment;
-use Slim\Psr7\Factory\ResponseFactory;
-use Slim\Psr7\Factory\UriFactory;
-use Slim\Psr7\Headers;
-use Slim\Psr7\Request;
-use Slim\Psr7\Response;
-use Slim\Psr7\Stream;
 
-class CsrfTest extends TestCase
+class GuardTest extends TestCase
 {
-    /**
-     * PSR7 request object
-     *
-     * @var \Psr\Http\Message\RequestInterface
-     */
-    protected $request;
-
-    /**
-     * PSR7 response object
-     *
-     * @var \Psr\Http\Message\ResponseInterface
-     */
-    protected $response;
-
-    /**
-     * @var ResponseFactory
-     */
-    protected $responseFactory;
-
-    /**
-     * @var MiddlewareDispatcher
-     */
-    protected $middlewareDispatcher;
-
-    /**
-     * Run before each test
-     *
-     * @return void
-     */
-    public function setUp(): void
-    {
-        $uri = (new UriFactory())->createUri('https://example.com:443/foo/bar?abc=123');
-        $headers = new Headers();
-        $cookies = [];
-        $serverParams = Environment::mock();
-        $body = new Stream(fopen('php://temp', 'r+'));
-        $this->request = new Request('GET', $uri, $headers, $cookies, $serverParams, $body);
-
-        $this->response = new Response();
-
-        $this->responseFactory = new ResponseFactory();
-
-        $this->middlewareDispatcher = new MiddlewareDispatcher($this->createMock(RequestHandlerInterface::class));
-    }
-
     public function testTokenKeys()
     {
         $mw = new Guard('test');
