@@ -1,453 +1,367 @@
 <?php
+/**
+ * Slim Framework (https://slimframework.com)
+ *
+ * @license https://github.com/slimphp/Slim-Csrf/blob/master/LICENSE.md (MIT License)
+ */
 
 declare(strict_types=1);
 
 namespace Slim\Tests\Csrf;
 
+use ArrayIterator;
+use Exception;
 use PHPUnit\Framework\TestCase;
+use Prophecy\Argument;
+use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\StreamInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use ReflectionMethod;
+use RuntimeException;
 use Slim\Csrf\Guard;
-use Slim\MiddlewareDispatcher;
 
 class GuardTest extends TestCase
 {
-    public function testTokenKeys()
+    /**
+     * @expectedException Exception
+     * @expectedExceptionMessage CSRF middleware instantiation failed. Minimum strength is 16.
+     */
+    public function testStrengthLowerThan16ThrowsException()
     {
-        $mw = new Guard('test');
+        $storage = [];
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 200, 15);
+    }
+
+    /**
+     * @expectedException RuntimeException
+     * @expectedExceptionMessage Invalid CSRF storage.
+     * Use session_start() before instantiating the Guard middleware or provide array storage.
+     */
+    public function testSetStorageThrowsExceptionWhenFallingBackOnSessionThatHasNotBeenStarted()
+    {
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test');
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testSetStorageSetsKeysOnSessionObjectWhenNotExist()
+    {
+        session_start();
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test');
+
+        $this->assertArrayHasKey('test', $_SESSION);
+    }
+
+    public function testSetFailureHandler()
+    {
+        $self = $this;
+
+        $storage = [];
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
+
+        $called = 0;
+        $handler = function () use ($self, &$called) {
+            $called++;
+            $responseProphecy = $self->prophesize(ResponseInterface::class);
+            return $responseProphecy->reveal();
+        };
+        $mw->setFailureHandler($handler);
+
+        $requestProphecy = $this->prophesize(ServerRequestInterface::class);
+        $requestProphecy
+            ->getMethod()
+            ->willReturn('POST')
+            ->shouldBeCalledOnce();
+
+        $requestProphecy
+            ->withAttribute(Argument::type('string'), Argument::type('string'))
+            ->willReturn($requestProphecy->reveal())
+            ->shouldBeCalledTimes(2);
+
+        $requestProphecy
+            ->getParsedBody()
+            ->willReturn([])
+            ->shouldBeCalledOnce();
+
+        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
+
+        $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
+        $this->assertEquals(1, $called);
+    }
+
+    public function testDefaultFailureHandler()
+    {
+        $streamProphecy = $this->prophesize(StreamInterface::class);
+        $streamProphecy
+            ->write('Failed CSRF check!')
+            ->shouldBeCalledOnce();
+
+        $responseProphecy = $this->prophesize(ResponseInterface::class);
+
+        $responseProphecy
+            ->getBody()
+            ->willReturn($streamProphecy->reveal())
+            ->shouldBeCalledOnce();
+
+        $responseProphecy
+            ->withStatus(400)
+            ->willReturn($responseProphecy->reveal())
+            ->shouldBeCalledOnce();
+
+        $responseProphecy
+            ->withHeader('Content-Type', 'text/plain')
+            ->willReturn($responseProphecy->reveal())
+            ->shouldBeCalledOnce();
+
+        $responseProphecy
+            ->withBody($streamProphecy->reveal())
+            ->willReturn($responseProphecy->reveal())
+            ->shouldBeCalledOnce();
+
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $responseFactoryProphecy
+            ->createResponse()
+            ->willReturn($responseProphecy->reveal());
+
+        $storage = [];
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
+
+        $requestProphecy = $this->prophesize(ServerRequestInterface::class);
+        $requestProphecy
+            ->getMethod()
+            ->willReturn('POST')
+            ->shouldBeCalledOnce();
+
+        $requestProphecy
+            ->withAttribute(Argument::type('string'), Argument::type('string'))
+            ->willReturn($requestProphecy->reveal())
+            ->shouldBeCalledTimes(2);
+
+        $requestProphecy
+            ->getParsedBody()
+            ->willReturn([])
+            ->shouldBeCalledOnce();
+
+        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
+
+        $response = $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
+        $this->assertSame($response, $responseProphecy->reveal());
+    }
+
+    public function testValidateToken()
+    {
+        $storage = [
+            'test_name' => 'value'
+        ];
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
+
+        $this->assertTrue($mw->validateToken('test_name', 'value'));
+
+        $GLOBALS['function_exists_return'] = false;
+
+        $this->assertTrue($mw->validateToken('test_name', 'value'));
+    }
+
+    public function testGetTokenNameAndValue()
+    {
+        $storage = [];
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
+
+        $this->assertNull($mw->getTokenName());
+        $this->assertNull($mw->getTokenValue());
+
+        $loadLastKeyPairMethod = new ReflectionMethod($mw, 'loadLastKeyPair');
+        $loadLastKeyPairMethod->setAccessible(true);
+        $loadLastKeyPairMethod->invoke($mw);
+
+        $storage = [
+            'test_name' => 'value',
+        ];
+        $mw->setStorage($storage);
+        $loadLastKeyPairMethod->invoke($mw);
+
+        $this->assertEquals('test_name', $mw->getTokenName());
+        $this->assertEquals('value', $mw->getTokenValue());
+    }
+
+    public function testGetPersistentTokenMode()
+    {
+        $storage = [];
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 200, 16, true);
+
+        $this->assertTrue($mw->getPersistentTokenMode());
+    }
+
+    public function testGetTokenNameKeyAndValue()
+    {
+        $storage = [];
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
 
         $this->assertEquals('test_name', $mw->getTokenNameKey());
         $this->assertEquals('test_value', $mw->getTokenValueKey());
     }
 
-    public function testTokenGeneration()
+    public function testRemoveTokenFromStorage()
+    {
+        $storage = [
+            'test_name' => 'value',
+        ];
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
+
+        $removeTokenFromStorageMethod = new ReflectionMethod($mw, 'removeTokenFromStorage');
+        $removeTokenFromStorageMethod->setAccessible(true);
+        $removeTokenFromStorageMethod->invoke($mw, 'test_name');
+
+        $this->assertArrayNotHasKey('test_name', $storage);
+    }
+
+    public function testEnforceStorageLimitWithArray()
+    {
+        $storage = [
+            'test_name' => 'value',
+            'test_name2' => 'value2',
+        ];
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 1);
+
+        $enforceStorageLimitMethod = new ReflectionMethod($mw, 'enforceStorageLimit');
+        $enforceStorageLimitMethod->setAccessible(true);
+        $enforceStorageLimitMethod->invoke($mw);
+
+        $this->assertArrayNotHasKey('test_name', $storage);
+        $this->assertArrayHasKey('test_name2', $storage);
+    }
+
+    public function testEnforceStorageLimitWithIterator()
+    {
+        $storage = new ArrayIterator([
+            'test_name' => 'value',
+            'test_name2' => 'value',
+        ]);
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 1);
+
+        $enforceStorageLimitMethod = new ReflectionMethod($mw, 'enforceStorageLimit');
+        $enforceStorageLimitMethod->setAccessible(true);
+        $enforceStorageLimitMethod->invoke($mw);
+
+        $this->assertArrayNotHasKey('test_name', $storage);
+        $this->assertArrayHasKey('test_name2', $storage);
+    }
+
+    public function testTokenIsRemovedFromStorageWhenPersistentModeIsOff()
+    {
+        $self = $this;
+
+        $storage = [
+            'test_name' => 'test_value123',
+        ];
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $handler = function () use ($self, &$called) {
+            $responseProphecy = $self->prophesize(ResponseInterface::class);
+            return $responseProphecy->reveal();
+        };
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, $handler);
+
+        $requestProphecy = $this->prophesize(ServerRequestInterface::class);
+        $requestProphecy
+            ->getMethod()
+            ->willReturn('POST')
+            ->shouldBeCalledOnce();
+
+        $requestProphecy
+            ->withAttribute(Argument::type('string'), Argument::type('string'))
+            ->willReturn($requestProphecy->reveal())
+            ->shouldBeCalledTimes(2);
+
+        $requestProphecy
+            ->getParsedBody()
+            ->willReturn([
+                'test_name' => 'test_name123',
+                'test_value' => 'invalid_value',
+            ])
+            ->shouldBeCalledOnce();
+
+        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
+
+        $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
+        $this->assertArrayNotHasKey('test_name123', $storage);
+    }
+
+    public function testProcessAppendsNewTokensWhenPersistentTokenModeIsOff()
     {
         $storage = [];
-        $request = $this->request;
-        $responseFactory = $this->responseFactory;
-        $mw = new Guard('csrf', $storage);
-        $mw2 = function (
-            ServerRequestInterface $request,
-            RequestHandlerInterface $handler
-        ) use (
-            $mw,
-            $responseFactory
-        ): ResponseInterface {
-            return $responseFactory->createResponse()
-                ->withHeader('X-CSRF-NAME', $request->getAttribute($mw->getTokenNameKey()))
-                ->withHeader('X-CSRF-VALUE', $request->getAttribute($mw->getTokenValueKey()));
-        };
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
 
-        $this->middlewareDispatcher->addCallable($mw2);
-        $this->middlewareDispatcher->addMiddleware($mw);
-        $response1 = $this->middlewareDispatcher->handle($request);
-        $response2 = $this->middlewareDispatcher->handle($request);
+        $responseProphecy = $this->prophesize(ResponseInterface::class);
 
-        $this->assertStringStartsWith(
-            'csrf',
-            $response1->getHeaderLine('X-CSRF-NAME'),
-            'Name key should start with csrf prefix'
-        );
-        $this->assertStringStartsWith(
-            'csrf',
-            $response2->getHeaderLine('X-CSRF-NAME'),
-            'Name key should start with csrf prefix'
-        );
+        $requestProphecy = $this->prophesize(ServerRequestInterface::class);
+        $requestProphecy
+            ->getMethod()
+            ->willReturn('GET')
+            ->shouldBeCalledOnce();
 
-        $this->assertNotEquals(
-            $response1->getHeaderLine('X-CSRF-NAME'),
-            $response2->getHeaderLine('X-CSRF-NAME'),
-            'Generated token names must be unique'
-        );
+        $requestProphecy
+            ->withAttribute(Argument::type('string'), Argument::type('string'))
+            ->willReturn($requestProphecy->reveal())
+            ->shouldBeCalledTimes(2);
 
-        $this->assertEquals(
-            32,
-            strlen($response1->getHeaderLine('X-CSRF-VALUE')),
-            'Length of the generated token value should be double the strength'
-        );
-        $this->assertEquals(
-            32,
-            strlen($response2->getHeaderLine('X-CSRF-VALUE')),
-            'Length of the generated token value should be double the strength'
-        );
+        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
 
-        $this->assertTrue(
-            ctype_xdigit($response1->getHeaderLine('X-CSRF-VALUE')),
-            'Generated token value is not hexadecimal'
-        );
-        $this->assertTrue(
-            ctype_xdigit($response2->getHeaderLine('X-CSRF-VALUE')),
-            'Generated token value is not hexadecimal'
-        );
+        $requestHandlerProphecy
+            ->handle($requestProphecy)
+            ->willReturn($responseProphecy->reveal())
+            ->shouldBeCalledOnce();
+
+        $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
     }
 
-    public function testValidToken()
+    public function testProcessAppendsNewTokensWhenPersistentTokenModeIsOn()
     {
-        $storage = ['csrf_123' => 'xyz'];
-        $request = $this->request
-                        ->withMethod('POST')
-                        ->withParsedBody([
-                            'csrf_name' => 'csrf_123',
-                            'csrf_value' => 'xyz'
-                        ]);
-        $mw = new Guard('csrf', $storage);
-        $responseFactory = $this->responseFactory;
-        $mw2 = function (
-            ServerRequestInterface $request,
-            RequestHandlerInterface $handler
-        ) use (
-            $mw,
-            $responseFactory
-        ): ResponseInterface {
-            return $responseFactory->createResponse();
-        };
-
-        $this->middlewareDispatcher->addMiddleware($mw);
-        $this->middlewareDispatcher->addCallable($mw2);
-        $newResponse = $this->middlewareDispatcher->handle($request);
-
-        $this->assertEquals(200, $newResponse->getStatusCode());
-    }
-
-    public function testInvalidToken()
-    {
-        $storage = ['csrf_123' => 'abc']; // <-- Invalid token value
-        $request = $this->request
-                        ->withMethod('POST')
-                        ->withParsedBody([
-                            'csrf_name' => 'csrf_123',
-                            'csrf_value' => 'xyz'
-                        ]);
-        $mw = new Guard('csrf', $storage);
-        $this->middlewareDispatcher->addMiddleware($mw);
-        $newResponse = $this->middlewareDispatcher->handle($request);
-
-        $this->assertEquals(400, $newResponse->getStatusCode());
-    }
-
-    public function testMissingToken()
-    {
-        $storage = []; // <-- Missing token name and value
-        $request = $this->request
-                        ->withMethod('POST')
-                        ->withParsedBody([
-                            'csrf_name' => 'csrf_123',
-                            'csrf_value' => 'xyz'
-                        ]);
-        $mw = new Guard('csrf', $storage);
-        $this->middlewareDispatcher->addMiddleware($mw);
-        $newResponse = $this->middlewareDispatcher->handle($request);
-
-        $this->assertEquals(400, $newResponse->getStatusCode());
-    }
-
-    public function testExternalStorageOfAnArrayAccessPersists()
-    {
-        $storage = new \ArrayObject();
-
-        $request = $this->request
-                        ->withMethod('POST')
-                        ->withParsedBody([
-                            'csrf_name' => 'csrf_123',
-                            'csrf_value' => 'xyz'
-                        ]);
-        $mw = new Guard('csrf', $storage);
-
-        $this->assertEquals(0, count($storage));
-        $this->middlewareDispatcher->addMiddleware($mw);
-        $newResponse = $this->middlewareDispatcher->handle($request);
-        $this->assertEquals(1, count($storage));
-    }
-
-    public function testExternalStorageOfAnArrayPersists()
-    {
-        $storage = [];
-
-        $request = $this->request
-                        ->withMethod('POST')
-                        ->withParsedBody([
-                            'csrf_name' => 'csrf_123',
-                            'csrf_value' => 'xyz'
-                        ]);
-        $mw = new Guard('csrf', $storage);
-
-        $this->assertEquals(0, count($storage));
-        $this->middlewareDispatcher->addMiddleware($mw);
-        $newResponse = $this->middlewareDispatcher->handle($request);
-        $this->assertEquals(1, count($storage));
-    }
-
-    public function testPersistenceModeTrueBetweenRequestsArray()
-    {
-        $storage = [];
-
-        $mw = new Guard('csrf', $storage, null, 200, 16, true);
-
-        $responseFactory = $this->responseFactory;
-        $mw2 = function (
-            ServerRequestInterface $request,
-            RequestHandlerInterface $handler
-        ) use (
-            $mw,
-            $responseFactory
-        ): ResponseInterface {
-            // Token name and value should be accessible in the middleware as request attributes
-            $this->assertEquals($mw->getTokenName(), $request->getAttribute('csrf_name'));
-            $this->assertEquals($mw->getTokenValue(), $request->getAttribute('csrf_value'));
-            return $responseFactory->createResponse();
-        };
-
-        // Token name and value should be null if the storage is empty and middleware has not yet been invoked
-        $this->assertNull($mw->getTokenName());
-        $this->assertNull($mw->getTokenValue());
-
-        $this->middlewareDispatcher->addMiddleware($mw);
-        $response = $this->middlewareDispatcher->handle($this->request);
-
-        // Persistent token name and value have now been generated
-        $name = $mw->getTokenName();
-        $value = $mw->getTokenValue();
-
-        // Subsequent request will attempt to validate the token
-        $request = $this->request
-                        ->withMethod('POST')
-                        ->withParsedBody([
-                            'csrf_name' => $name,
-                            'csrf_value' => $value
-                        ]);
-        $this->middlewareDispatcher->addMiddleware($mw);
-        $response = $this->middlewareDispatcher->handle($request);
-
-        // Token name and value should be the same after subsequent request
-        $this->assertEquals($name, $mw->getTokenName());
-        $this->assertEquals($value, $mw->getTokenValue());
-    }
-
-    public function testPersistenceModeTrueBetweenRequestsArrayAccess()
-    {
-        $storage = new \ArrayObject();
-
-        $mw = new Guard('csrf', $storage, null, 200, 16, true);
-
-        $responseFactory = $this->responseFactory;
-        $mw2 = function (
-            ServerRequestInterface $request,
-            RequestHandlerInterface $handler
-        ) use (
-            $mw,
-            $responseFactory
-        ): ResponseInterface {
-            // Token name and value should be accessible in the middleware as request attributes
-            $this->assertEquals($mw->getTokenName(), $request->getAttribute('csrf_name'));
-            $this->assertEquals($mw->getTokenValue(), $request->getAttribute('csrf_value'));
-            return $responseFactory->createResponse();
-        };
-
-        // Token name and value should be null if the storage is empty and middleware has not yet been invoked
-        $this->assertNull($mw->getTokenName());
-        $this->assertNull($mw->getTokenValue());
-
-        $this->middlewareDispatcher->addMiddleware($mw);
-        $response = $this->middlewareDispatcher->handle($this->request);
-
-        // Persistent token name and value have now been generated
-        $name = $mw->getTokenName();
-        $value = $mw->getTokenValue();
-
-        // Subsequent request will attempt to validate the token
-        $request = $this->request
-                        ->withMethod('POST')
-                        ->withParsedBody([
-                            'csrf_name' => $name,
-                            'csrf_value' => $value
-                        ]);
-        $this->middlewareDispatcher->addMiddleware($mw);
-        $response = $this->middlewareDispatcher->handle($request);
-
-        // Token name and value should be the same after subsequent request
-        $this->assertEquals($name, $mw->getTokenName());
-        $this->assertEquals($value, $mw->getTokenValue());
-    }
-
-    public function testPersistenceModeFalseBetweenRequestsArray()
-    {
-        $storage = [];
-
-        $mw = new Guard('csrf', $storage);
-
-        $responseFactory = $this->responseFactory;
-        $mw2 = function (
-            ServerRequestInterface $request,
-            RequestHandlerInterface $handler
-        ) use (
-            $mw,
-            $responseFactory
-        ): ResponseInterface {
-            // Token name and value should be accessible in the middleware as request attributes
-            $this->assertEquals($mw->getTokenName(), $request->getAttribute('csrf_name'));
-            $this->assertEquals($mw->getTokenValue(), $request->getAttribute('csrf_value'));
-            return $responseFactory->createResponse();
-        };
-
-        // Token name and value should be null if the storage is empty and middleware has not yet been invoked
-        $this->assertNull($mw->getTokenName());
-        $this->assertNull($mw->getTokenValue());
-
-        $this->middlewareDispatcher->addMiddleware($mw);
-        $response = $this->middlewareDispatcher->handle($this->request);
-
-        // First token name and value have now been generated
-        $name = $mw->getTokenName();
-        $value = $mw->getTokenValue();
-
-        // Subsequent request will attempt to validate the token
-        $request = $this->request
-                        ->withMethod('POST')
-                        ->withParsedBody([
-                            'csrf_name' => $name,
-                            'csrf_value' => $value
-                        ]);
-        $this->middlewareDispatcher->addMiddleware($mw);
-        $response = $this->middlewareDispatcher->handle($request);
-
-        // Token name and value should NOT be the same after subsequent request
-        $this->assertNotEquals($name, $mw->getTokenName());
-        $this->assertNotEquals($value, $mw->getTokenValue());
-    }
-
-    public function testPersistenceModeFalseBetweenRequestsArrayAccess()
-    {
-        $storage = new \ArrayObject();
-
-        $mw = new Guard('csrf', $storage);
-
-        $responseFactory = $this->responseFactory;
-        $mw2 = function (
-            ServerRequestInterface $request,
-            RequestHandlerInterface $handler
-        ) use (
-            $mw,
-            $responseFactory
-        ): ResponseInterface {
-            // Token name and value should be accessible in the middleware as request attributes
-            $this->assertEquals($mw->getTokenName(), $request->getAttribute('csrf_name'));
-            $this->assertEquals($mw->getTokenValue(), $request->getAttribute('csrf_value'));
-            return $responseFactory->createResponse();
-        };
-
-        // Token name and value should be null if the storage is empty and middleware has not yet been invoked
-        $this->assertNull($mw->getTokenName());
-        $this->assertNull($mw->getTokenValue());
-
-        $this->middlewareDispatcher->addMiddleware($mw);
-        $response = $this->middlewareDispatcher->handle($this->request);
-
-        // First token name and value have now been generated
-        $name = $mw->getTokenName();
-        $value = $mw->getTokenValue();
-
-        // Subsequent request will attempt to validate the token
-        $request = $this->request
-                        ->withMethod('POST')
-                        ->withParsedBody([
-                            'csrf_name' => $name,
-                            'csrf_value' => $value
-                        ]);
-        $this->middlewareDispatcher->addMiddleware($mw);
-        $response = $this->middlewareDispatcher->handle($request);
-
-        // Token name and value should NOT be the same after subsequent request
-        $this->assertNotEquals($name, $mw->getTokenName());
-        $this->assertNotEquals($value, $mw->getTokenValue());
-    }
-
-    public function testUpdateAfterInvalidTokenWithPersistenceModeTrue()
-    {
-        $storage = [];
-
-        $mw = new Guard('csrf', $storage, null, 200, 16, true);
-
-        $this->middlewareDispatcher->addMiddleware($mw);
-        $response = $this->middlewareDispatcher->handle($this->request);
-
-        // Persistent token name and value have now been generated
-        $name = $mw->getTokenName();
-        $value = $mw->getTokenValue();
-
-        // Bad request, token should get updated
-        $request = $this->request
-                        ->withMethod('POST')
-                        ->withParsedBody([
-                            'csrf_name' => 'csrf_123',
-                            'csrf_value' => 'xyz'
-                        ]);
-        $this->middlewareDispatcher->addMiddleware($mw);
-        $response = $this->middlewareDispatcher->handle($request);
-
-        // Token name and value should NOT be the same after subsequent request
-        $this->assertNotEquals($name, $mw->getTokenName());
-        $this->assertNotEquals($value, $mw->getTokenValue());
-    }
-
-    public function testStorageLimitIsEnforcedForObjects()
-    {
-        $storage = new \ArrayObject();
-
-        $request = $this->request;
-
-        $mw = new Guard('csrf', $storage);
-        $mw->setStorageLimit(2);
-
-        $this->assertEquals(0, count($storage));
-
-        $this->middlewareDispatcher->addMiddleware($mw);
-        $response = $this->middlewareDispatcher->handle($request);
-        $response = $this->middlewareDispatcher->handle($request);
-        $response = $this->middlewareDispatcher->handle($request);
-        $this->assertEquals(2, count($storage));
-    }
-
-    public function testStorageLimitIsEnforcedForArrays()
-    {
-        $storage = [];
-
-        $request = $this->request;
-
-        $mw = new Guard('csrf', $storage);
-        $mw->setStorageLimit(2);
-
-        $this->assertEquals(0, count($storage));
-
-        $this->middlewareDispatcher->addMiddleware($mw);
-        $response = $this->middlewareDispatcher->handle($request);
-        $response = $this->middlewareDispatcher->handle($request);
-        $response = $this->middlewareDispatcher->handle($request);
-        $this->assertEquals(2, count($storage));
-    }
-
-    public function testKeyPair()
-    {
-        $mw = new Guard();
-
-        $this->middlewareDispatcher->addMiddleware($mw);
-        $response = $this->middlewareDispatcher->handle($this->request);
-
-        $this->assertNotNull($mw->getTokenName());
-
-        $this->assertNotNull($mw->getTokenValue());
-    }
-
-    public function testDefaultStorageIsSession()
-    {
-        $sessionBackup = $_SESSION;
-        $_SESSION = array();
-
-        $mw = new Guard('csrf');
-        $mw->validateStorage();
-
-        $this->assertNotEmpty($_SESSION);
-
-        $_SESSION = $sessionBackup;
+        $storage = [
+            'test_name123' => 'test_value123',
+        ];
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 200, 16, true);
+
+        $responseProphecy = $this->prophesize(ResponseInterface::class);
+
+        $requestProphecy = $this->prophesize(ServerRequestInterface::class);
+        $requestProphecy
+            ->getMethod()
+            ->willReturn('GET')
+            ->shouldBeCalledOnce();
+
+        $requestProphecy
+            ->withAttribute('test_name', 'test_name123')
+            ->willReturn($requestProphecy->reveal())
+            ->shouldBeCalledOnce();
+
+        $requestProphecy
+            ->withAttribute('test_value', 'test_value123')
+            ->willReturn($requestProphecy->reveal())
+            ->shouldBeCalledOnce();
+
+        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
+
+        $requestHandlerProphecy
+            ->handle($requestProphecy)
+            ->willReturn($responseProphecy->reveal())
+            ->shouldBeCalledOnce();
+
+        $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
     }
 }
