@@ -1,6 +1,7 @@
 # Slim Framework CSRF Protection
 
 [![Build Status](https://travis-ci.org/slimphp/Slim-Csrf.svg?branch=master)](https://travis-ci.org/slimphp/Slim-Csrf)
+[![Coverage Status](https://coveralls.io/repos/github/slimphp/Slim-Csrf/badge.svg?branch=master)](https://coveralls.io/github/slimphp/Slim-Csrf?branch=master)
 
 This repository contains a Slim Framework CSRF protection PSR-15 middleware. CSRF protection applies to all unsafe HTTP requests (POST, PUT, DELETE, PATCH).
 
