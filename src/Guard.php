@@ -2,7 +2,7 @@
 /**
  * Slim Framework (https://slimframework.com)
  *
- * @license https://github.com/slimphp/Slim/blob/4.x/LICENSE.md (MIT License)
+ * @license https://github.com/slimphp/Slim-Csrf/blob/master/LICENSE.md (MIT License)
  */
 
 declare(strict_types=1);
@@ -39,8 +39,8 @@ class Guard implements MiddlewareInterface
      * CSRF storage
      *
      * Should be either an array or an object. If an object is used, then it must
-     * implement ArrayAccess and should implement Countable and Iterator (or
-     * IteratorAggregate) if storage limit enforcement is required.
+     * implement ArrayAccess and should implement Countable and Iterator
+     * if storage limit enforcement is required.
      *
      * @var array|ArrayAccess
      */
@@ -48,8 +48,6 @@ class Guard implements MiddlewareInterface
 
     /**
      * Number of elements to store in the storage array
-     *
-     * Default is 200, set via constructor
      *
      * @var int
      */
@@ -109,7 +107,7 @@ class Guard implements MiddlewareInterface
         $this->prefix = rtrim($prefix, '_');
 
         if ($strength < 16) {
-            throw new RuntimeException('CSRF middleware failed. Minimum strength is 16.');
+            throw new RuntimeException('CSRF middleware instantiation failed. Minimum strength is 16.');
         }
         $this->strength = $strength;
 
@@ -127,13 +125,16 @@ class Guard implements MiddlewareInterface
      */
     public function setStorage(&$storage = null): void
     {
-        if (is_array($this->storage) || ($this->storage instanceof ArrayAccess)) {
+        if (is_array($storage) || ($storage instanceof ArrayAccess)) {
             $this->storage = &$storage;
             return;
         }
 
         if (!isset($_SESSION)) {
-            throw new RuntimeException('Invalid CSRF storage. Use session_start()');
+            throw new RuntimeException(
+                'Invalid CSRF storage. ' .
+                'Use session_start() before instantiating the Guard middleware or provide array storage.'
+            );
         }
 
         if (!array_key_exists($this->prefix, $_SESSION) || !is_array($_SESSION[$this->prefix])) {
@@ -144,10 +145,8 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * Setter for failureCallable
-     *
      * @param mixed $failureHandler Value to set
-     * @return $this
+     * @return self
      */
     public function setFailureHandler($failureHandler): self
     {
@@ -156,11 +155,9 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * Setter for persistentTokenMode
-     *
      * @param bool $persistentTokenMode True to use the same token throughout the session
      * (unless there is a validation error), false to get a new token with each request.
-     * @return $this
+     * @return self
      */
     public function setPersistentTokenMode(bool $persistentTokenMode): self
     {
@@ -169,21 +166,19 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * Setter for storageLimit
-     *
      * @param integer $storageLimit Value to set
+     *
      * @return $this
      */
     public function setStorageLimit(int $storageLimit): self
     {
-        $this->storageLimit = (int)$storageLimit;
+        $this->storageLimit = $storageLimit;
         return $this;
     }
 
     /**
-     * Generate CSRF Token
-     *
      * @return string
+     *
      * @throws Exception
      */
     protected function createToken(): string
@@ -201,7 +196,7 @@ class Guard implements MiddlewareInterface
         // Generate new CSRF token
         $name = uniqid($this->prefix);
         $value = $this->createToken();
-        $this->saveToStorage($name, $value);
+        $this->saveTokenToStorage($name, $value);
 
         $this->keyPair = [
             $this->prefix . '_name' => $name,
@@ -212,8 +207,7 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * Validate CSRF token from current request
-     * against token value stored in $_SESSION
+     * Validate CSRF token from current request against token value stored in $_SESSION
      *
      * @param  string|null $name  CSRF name
      * @param  string|null $value CSRF token value
@@ -254,8 +248,6 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * Retrieve token name key
-     *
      * @return string
      */
     public function getTokenNameKey(): string
@@ -264,8 +256,6 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * Retrieve token value key
-     *
      * @return string
      */
     public function getTokenValueKey(): string
@@ -274,8 +264,6 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * Getter for persistentTokenMode
-     *
      * @return bool
      */
     public function getPersistentTokenMode(): bool
@@ -284,9 +272,7 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * Get the most recent key pair from storage.
-     *
-     * @return string[]|null Array containing name and value if found, null otherwise
+     * @return string[]|null
      */
     protected function getLastKeyPair(): ?array
     {
@@ -321,13 +307,12 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * Save token to storage
-     *
      * @param  string $name  CSRF token name
      * @param  string $value CSRF token value
+     *
      * @return void
      */
-    protected function saveToStorage(string $name, string $value): void
+    protected function saveTokenToStorage(string $name, string $value): void
     {
         $this->storage[$name] = $value;
     }
@@ -337,9 +322,9 @@ class Guard implements MiddlewareInterface
      *
      * @param  string $name CSRF token name
      */
-    protected function removeFromStorage(string $name): void
+    protected function removeTokenFromStorage(string $name): void
     {
-        $this->storage[$name] = ' ';
+        $this->storage[$name] = '';
         unset($this->storage[$name]);
     }
 
@@ -352,29 +337,27 @@ class Guard implements MiddlewareInterface
      */
     protected function enforceStorageLimit(): void
     {
-        if ($this->storageLimit < 1
-            || (
-                !is_array($this->storage)
-                && !($this->storage instanceof Countable && $this->storage instanceof Traversable)
+        if ($this->storageLimit > 0
+            && (is_array($this->storage)
+                || ($this->storage instanceof Countable && $this->storage instanceof Iterator)
             )
         ) {
-            return;
-        }
-
-        if (is_array($this->storage)) {
-            while (count($this->storage) > $this->storageLimit) {
-                array_shift($this->storage);
-            }
-        } else if ($this->storage instanceof Iterator) {
-            while (count($this->storage) > $this->storageLimit) {
-                $this->storage->rewind();
-                unset($this->storage[$this->storage->key()]);
+            if (is_array($this->storage)) {
+                while (count($this->storage) > $this->storageLimit) {
+                    array_shift($this->storage);
+                }
+            } elseif ($this->storage instanceof Iterator) {
+                while (count($this->storage) > $this->storageLimit) {
+                    $this->storage->rewind();
+                    unset($this->storage[$this->storage->key()]);
+                }
             }
         }
     }
 
     /**
      * @param ServerRequestInterface $request
+     *
      * @return ServerRequestInterface
      *
      * @throws Exception
@@ -388,6 +371,7 @@ class Guard implements MiddlewareInterface
     /**
      * @param ServerRequestInterface $request
      * @param $pair
+     *
      * @return ServerRequestInterface
      */
     protected function appendTokenToRequest(ServerRequestInterface $request, array $pair): ServerRequestInterface
@@ -402,7 +386,9 @@ class Guard implements MiddlewareInterface
     /**
      * @param ServerRequestInterface  $request
      * @param RequestHandlerInterface $handler
+     *
      * @return ResponseInterface
+     *
      * @throws Exception
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
@@ -419,7 +405,7 @@ class Guard implements MiddlewareInterface
 
             if (!$this->validateToken($name, $value)) {
                 if (!$this->persistentTokenMode && is_string($name)) {
-                    $this->removeFromStorage($name);
+                    $this->removeTokenFromStorage($name);
                 }
 
                 $request = $this->appendNewTokenToRequest($request);
@@ -427,7 +413,6 @@ class Guard implements MiddlewareInterface
             }
         }
 
-        // Generate new CSRF token if persistentTokenMode is false, or if a valid keyPair has not yet been stored
         if (!$this->persistentTokenMode || !$this->loadLastKeyPair()) {
             $request = $this->appendNewTokenToRequest($request);
         } elseif ($this->persistentTokenMode) {
@@ -443,6 +428,7 @@ class Guard implements MiddlewareInterface
     /**
      * @param ServerRequestInterface  $request
      * @param RequestHandlerInterface $handler
+     *
      * @return ResponseInterface
      */
     public function handleFailure(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
@@ -453,7 +439,7 @@ class Guard implements MiddlewareInterface
             $body->write('Failed CSRF check!');
             return $response
                 ->withStatus(400)
-                ->withHeader('Content-type', 'text/plain')
+                ->withHeader('Content-Type', 'text/plain')
                 ->withBody($body);
         }
 
