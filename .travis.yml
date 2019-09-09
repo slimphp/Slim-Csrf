@@ -1,10 +1,25 @@
 language: php
 
-php:
-  - 7.1
-  - 7.2
-  - 7.3
+dist: trusty
 
-before_script: composer install
+matrix:
+  include:
+    - php: 7.1
+    - php: 7.2
+    - php: 7.3
+      env: ANALYSIS='true'
+    - php: nightly
 
-script: vendor/bin/phpunit --coverage-text
+  allow_failures:
+    - php: nightly
+
+before_script:
+  - if [[ "$ANALYSIS" == 'true' ]]; then composer require php-coveralls/php-coveralls:^2.1.0 ; fi
+  - composer install -n
+
+script:
+  - if [[ "$ANALYSIS" != 'true' ]]; then vendor/bin/phpunit ; fi
+  - if [[ "$ANALYSIS" == 'true' ]]; then vendor/bin/phpunit --coverage-clover clover.xml ; fi
+
+after_success:
+  - if [[ "$ANALYSIS" == 'true' ]]; then vendor/bin/php-coveralls --coverage_clover=clover.xml -v ; fi
