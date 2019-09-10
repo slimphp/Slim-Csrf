@@ -421,7 +421,7 @@ class Guard implements MiddlewareInterface
 
         if (!$this->persistentTokenMode || !$this->loadLastKeyPair()) {
             $request = $this->appendNewTokenToRequest($request);
-        } elseif ($this->persistentTokenMode) {
+        } else {
             $pair = $this->loadLastKeyPair() ? $this->keyPair : $this->generateToken();
             $request = $this->appendTokenToRequest($request, $pair);
         }
