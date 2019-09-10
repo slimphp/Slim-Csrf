@@ -285,13 +285,11 @@ class Guard implements MiddlewareInterface
         if (count($this->storage) < 1) {
             return null;
         }
-
-        $name = null;
-        $value = null;
-        foreach ($this->storage as $k => $v) {
-            $name = $k;
-            $value = $v;
-        }
+        
+        end($this->storage);
+        $name = key($this->storage);
+        $value = $this->storage[$name];
+        reset($this->storage);
 
         return $name !== null && $value !== null
             ? [
