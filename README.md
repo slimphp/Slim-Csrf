@@ -35,6 +35,7 @@ session_start();
 
 // Create Container
 $container = new Container();
+AppFactory::setContainer($container);
 
 // Create App
 $app = AppFactory::create();
@@ -83,6 +84,7 @@ session_start();
 
 // Create Container
 $container = new Container();
+AppFactory::setContainer($container);
 
 // Create App
 $app = AppFactory::create();
