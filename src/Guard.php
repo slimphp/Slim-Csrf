@@ -63,7 +63,7 @@ class Guard implements MiddlewareInterface
      * Callable to be executed if the CSRF validation fails
      * It must return a ResponseInterface
      *
-     * @var callable
+     * @var callable|null
      */
     protected $failureHandler;
 
