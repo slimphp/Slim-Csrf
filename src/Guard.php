@@ -129,7 +129,7 @@ class Guard implements MiddlewareInterface
     {
         if (is_array($storage) || ($storage instanceof ArrayAccess)) {
             $this->storage = &$storage;
-            return;
+            return $this;
         }
 
         if (!isset($_SESSION)) {
@@ -201,9 +201,10 @@ class Guard implements MiddlewareInterface
         $value = $this->createToken();
         $this->saveTokenToStorage($name, $value);
 
+
         $this->keyPair = [
-            $this->prefix . '_name' => $name,
-            $this->prefix . '_value' => $value
+            $this->getTokenNameKey() => $name,
+            $this->getTokenValueKey() => $value
         ];
 
         return $this->keyPair;
@@ -293,8 +294,8 @@ class Guard implements MiddlewareInterface
 
         return $name !== null && $value !== null
             ? [
-                $this->prefix . '_name' => $name,
-                $this->prefix . '_value' => $value
+                $this->getTokenNameKey() => $name,
+                $this->getTokenValueKey() => $value
             ]
             : null;
     }
@@ -379,8 +380,8 @@ class Guard implements MiddlewareInterface
      */
     protected function appendTokenToRequest(ServerRequestInterface $request, array $pair): ServerRequestInterface
     {
-        $name = $this->prefix . '_name';
-        $value = $this->prefix . '_value';
+        $name = $this->getTokenNameKey();
+        $value = $this->getTokenValueKey();
         return $request
             ->withAttribute($name, $pair[$name])
             ->withAttribute($value, $pair[$value]);
@@ -402,8 +403,8 @@ class Guard implements MiddlewareInterface
             $value = null;
 
             if (is_array($body)) {
-                $name = $body[$this->prefix . '_name'] ?? null;
-                $value = $body[$this->prefix . '_value'] ?? null;
+                $name = $body[$this->getTokenNameKey()] ?? null;
+                $value = $body[$this->getTokenValueKey()] ?? null;
             }
 
             if (!$this->validateToken($name, $value)) {
