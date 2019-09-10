@@ -374,7 +374,7 @@ class Guard implements MiddlewareInterface
 
     /**
      * @param ServerRequestInterface $request
-     * @param $pair
+     * @param array $pair
      *
      * @return ServerRequestInterface
      */
