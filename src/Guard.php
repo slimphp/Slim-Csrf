@@ -214,16 +214,16 @@ class Guard implements MiddlewareInterface
      * Validate CSRF token from current request against token value
      * stored in $_SESSION or user provided storage
      *
-     * @param  string|null $name  CSRF name
-     * @param  string|null $value CSRF token value
+     * @param  string $name  CSRF name
+     * @param  string $value CSRF token value
      *
      * @return bool
      */
-    public function validateToken(?string $name, ?string $value): bool
+    public function validateToken(string $name, string $value): bool
     {
         $valid = false;
 
-        if ($name !== null && isset($this->storage[$name])) {
+        if (isset($this->storage[$name])) {
             $token = $this->storage[$name];
 
             if (function_exists('hash_equals')) {
@@ -408,7 +408,10 @@ class Guard implements MiddlewareInterface
                 $value = $body[$this->getTokenValueKey()] ?? null;
             }
 
-            if (!$this->validateToken($name, $value)) {
+            if ($name === null
+                || $value === null
+                || !$this->validateToken((string) $name, (string) $value)
+            ) {
                 if (!$this->persistentTokenMode && is_string($name)) {
                     $this->removeTokenFromStorage($name);
                 }
