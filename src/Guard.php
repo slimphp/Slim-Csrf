@@ -98,7 +98,7 @@ class Guard implements MiddlewareInterface
         ResponseFactoryInterface $responseFactory,
         string $prefix = 'csrf',
         &$storage = null,
-        callable $failureHandler = null,
+        ?callable $failureHandler = null,
         int $storageLimit = 200,
         int $strength = 16,
         bool $persistentTokenMode = false
@@ -145,10 +145,10 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * @param mixed $failureHandler Value to set
+     * @param callable|null $failureHandler Value to set
      * @return self
      */
-    public function setFailureHandler($failureHandler): self
+    public function setFailureHandler(?callable $failureHandler): self
     {
         $this->failureHandler = $failureHandler;
         return $this;
