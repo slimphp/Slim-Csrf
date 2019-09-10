@@ -119,7 +119,7 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * @param null|array|ArrayAccess
+     * @param null|array|ArrayAccess $storage
      *
      * @return self
      *
