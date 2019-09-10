@@ -211,7 +211,8 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * Validate CSRF token from current request against token value stored in $_SESSION
+     * Validate CSRF token from current request against token value
+     * stored in $_SESSION or user provided storage
      *
      * @param  string|null $name  CSRF name
      * @param  string|null $value CSRF token value
