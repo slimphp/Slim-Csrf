@@ -121,9 +121,12 @@ class Guard implements MiddlewareInterface
 
     /**
      * @param null|array|ArrayAccess
+     *
+     * @return self
+     *
      * @throws RuntimeException
      */
-    public function setStorage(&$storage = null): void
+    public function setStorage(&$storage = null): self
     {
         if (is_array($storage) || ($storage instanceof ArrayAccess)) {
             $this->storage = &$storage;
@@ -142,6 +145,7 @@ class Guard implements MiddlewareInterface
         }
 
         $this->storage = &$_SESSION[$this->prefix];
+        return $this;
     }
 
     /**
