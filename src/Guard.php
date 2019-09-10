@@ -285,7 +285,7 @@ class Guard implements MiddlewareInterface
         if (count($this->storage) < 1) {
             return null;
         }
-        
+
         end($this->storage);
         $name = key($this->storage);
         $value = $this->storage[$name];
@@ -306,7 +306,7 @@ class Guard implements MiddlewareInterface
      */
     protected function loadLastKeyPair(): bool
     {
-        return !!($this->keyPair = $this->getLastKeyPair());
+        return (bool) $this->keyPair = $this->getLastKeyPair();
     }
 
     /**
