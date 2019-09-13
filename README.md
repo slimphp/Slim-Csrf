@@ -51,8 +51,9 @@ $app->add('csrf');
 
 $app->get('/foo', function ($request, $response, $args) {
     // CSRF token name and value
-    $nameKey = $this->csrf->getTokenNameKey();
-    $valueKey = $this->csrf->getTokenValueKey();
+    $csrf = $this->get('csrf');
+    $nameKey = $csrf->getTokenNameKey();
+    $valueKey = $csrf->getTokenValueKey();
     $name = $request->getAttribute($nameKey);
     $value = $request->getAttribute($valueKey);
 
@@ -96,8 +97,9 @@ $container->set('csrf', function () use ($responseFactory) {
 });
 
 $app->get('/api/route',function ($request, $response, $args) {
-    $nameKey = $this->csrf->getTokenNameKey();
-    $valueKey = $this->csrf->getTokenValueKey();
+    $csrf = $this->get('csrf');
+    $nameKey = $csrf->getTokenNameKey();
+    $valueKey = $csrf->getTokenValueKey();
     $name = $request->getAttribute($nameKey);
     $value = $request->getAttribute($valueKey);
 
