@@ -1,4 +1,4 @@
-composer.lock
-phpunit.xml
-vendor
 .idea
+composer.lock
+vendor
+coverage
