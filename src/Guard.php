@@ -127,12 +127,17 @@ class Guard implements MiddlewareInterface
      */
     public function setStorage(&$storage = null): self
     {
-        if (is_array($storage) || ($storage instanceof ArrayAccess)) {
+        if (is_array($storage)
+            || ($storage instanceof ArrayAccess
+                && $storage instanceof Countable
+                && $storage instanceof Iterator
+            )
+        ) {
             $this->storage = &$storage;
             return $this;
         }
 
-        if (!isset($_SESSION)) {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
             throw new RuntimeException(
                 'Invalid CSRF storage. ' .
                 'Use session_start() before instantiating the Guard middleware or provide array storage.'
@@ -281,8 +286,10 @@ class Guard implements MiddlewareInterface
      */
     protected function getLastKeyPair(): ?array
     {
-        // Use count, since empty ArrayAccess objects can still return false for `empty`
-        if (count($this->storage) < 1) {
+        if (
+            (is_array($this->storage) && empty($this->storage))
+            || ($this->storage instanceof Countable && count($this->storage) < 1)
+        ) {
             return null;
         }
 
