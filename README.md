@@ -57,10 +57,12 @@ $app->get('/foo', function ($request, $response, $args) {
     $name = $request->getAttribute($nameKey);
     $value = $request->getAttribute($valueKey);
 
-    // Render HTML form which POSTs to /bar with two hidden input fields for the
-    // name and value:
-    // <input type="hidden" name="<?= $nameKey ?>" value="<?= $name ?>">
-    // <input type="hidden" name="<?= $valueKey ?>" value="<?= $value ?>">
+    /*
+       Render HTML form which POSTs to /bar with two hidden input fields for the
+       name and value:
+       <input type="hidden" name="<?= $nameKey ?>" value="<?= $name ?>">
+       <input type="hidden" name="<?= $valueKey ?>" value="<?= $value ?>">
+     */
 });
 
 $app->post('/bar', function ($request, $response, $args) {
