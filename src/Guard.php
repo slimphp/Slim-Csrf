@@ -332,7 +332,7 @@ class Guard implements MiddlewareInterface
      *
      * @param  string $name CSRF token name
      */
-    protected function removeTokenFromStorage(string $name): void
+    public function removeTokenFromStorage(string $name): void
     {
         $this->storage[$name] = '';
         unset($this->storage[$name]);
