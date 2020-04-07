@@ -81,7 +81,7 @@ class Guard implements MiddlewareInterface
      *
      * @var array|null
      */
-    protected $keyPair;
+    protected $keyPair = null;
 
     /**
      * @param ResponseFactoryInterface  $responseFactory
@@ -102,20 +102,18 @@ class Guard implements MiddlewareInterface
         int $strength = 16,
         bool $persistentTokenMode = false
     ) {
-        $this->responseFactory = $responseFactory;
-        $this->prefix = rtrim($prefix, '_');
-
         if ($strength < 16) {
             throw new RuntimeException('CSRF middleware instantiation failed. Minimum strength is 16.');
         }
+
+        $this->responseFactory = $responseFactory;
+        $this->prefix = rtrim($prefix, '_');
         $this->strength = $strength;
 
         $this->setStorage($storage);
         $this->setFailureHandler($failureHandler);
         $this->setStorageLimit($storageLimit);
         $this->setPersistentTokenMode($persistentTokenMode);
-
-        $this->keyPair = null;
     }
 
     /**
