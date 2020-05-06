@@ -81,7 +81,7 @@ class Guard implements MiddlewareInterface
      *
      * @var array|null
      */
-    protected $keyPair;
+    protected $keyPair = null;
 
     /**
      * @param ResponseFactoryInterface  $responseFactory
@@ -102,20 +102,18 @@ class Guard implements MiddlewareInterface
         int $strength = 16,
         bool $persistentTokenMode = false
     ) {
-        $this->responseFactory = $responseFactory;
-        $this->prefix = rtrim($prefix, '_');
-
         if ($strength < 16) {
             throw new RuntimeException('CSRF middleware instantiation failed. Minimum strength is 16.');
         }
+
+        $this->responseFactory = $responseFactory;
+        $this->prefix = rtrim($prefix, '_');
         $this->strength = $strength;
 
         $this->setStorage($storage);
         $this->setFailureHandler($failureHandler);
         $this->setStorageLimit($storageLimit);
         $this->setPersistentTokenMode($persistentTokenMode);
-
-        $this->keyPair = null;
     }
 
     /**
@@ -226,19 +224,17 @@ class Guard implements MiddlewareInterface
      */
     public function validateToken(string $name, string $value): bool
     {
-        $valid = false;
-
-        if (isset($this->storage[$name])) {
-            $token = $this->storage[$name];
-
-            if (function_exists('hash_equals')) {
-                $valid = hash_equals($token, $value);
-            } else {
-                $valid = $token === $value;
-            }
+        if (!isset($this->storage[$name])) {
+            return false;
         }
 
-        return $valid;
+        $token = $this->storage[$name];
+
+        if (function_exists('hash_equals')) {
+            return hash_equals($token, $value);
+        }
+
+        return $token === $value;
     }
 
     /**
@@ -347,20 +343,26 @@ class Guard implements MiddlewareInterface
      */
     protected function enforceStorageLimit(): void
     {
-        if ($this->storageLimit > 0
-            && (is_array($this->storage)
-                || ($this->storage instanceof Countable && $this->storage instanceof Iterator)
+        if ($this->storageLimit === 0
+            || (
+                !is_array($this->storage)
+                && !($this->storage instanceof Countable && $this->storage instanceof Iterator)
             )
         ) {
-            if (is_array($this->storage)) {
-                while (count($this->storage) > $this->storageLimit) {
-                    array_shift($this->storage);
-                }
-            } elseif ($this->storage instanceof Iterator) {
-                while (count($this->storage) > $this->storageLimit) {
-                    $this->storage->rewind();
-                    unset($this->storage[$this->storage->key()]);
-                }
+            return;
+        }
+
+        if (is_array($this->storage)) {
+            while (count($this->storage) > $this->storageLimit) {
+                array_shift($this->storage);
+            }
+            return;
+        }
+
+        if ($this->storage instanceof Iterator) {
+            while (count($this->storage) > $this->storageLimit) {
+                $this->storage->rewind();
+                unset($this->storage[$this->storage->key()]);
             }
         }
     }

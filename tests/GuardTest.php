@@ -244,6 +244,22 @@ class GuardTest extends TestCase
         $this->assertArrayHasKey('test_name2', $storage);
     }
 
+    public function testNotEnforceStorageLimitWithArrayWhenLimitIsZero()
+    {
+        $initial_storage = $storage = [
+            'test_name' => 'value',
+            'test_name2' => 'value2',
+        ];
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 0);
+
+        $enforceStorageLimitMethod = new ReflectionMethod($mw, 'enforceStorageLimit');
+        $enforceStorageLimitMethod->setAccessible(true);
+        $enforceStorageLimitMethod->invoke($mw);
+
+        $this->assertSame($initial_storage, $storage);
+    }
+
     public function testEnforceStorageLimitWithIterator()
     {
         $storage = new ArrayIterator([
