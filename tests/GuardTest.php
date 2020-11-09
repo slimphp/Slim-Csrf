@@ -316,6 +316,51 @@ class GuardTest extends TestCase
         $this->assertArrayNotHasKey('test_name123', $storage);
     }
 
+    public function testTokenIsRemovedFromStorageWhenPersistentModeIsOffWhenValidationIsSuccess()
+    {
+        $self = $this;
+
+        $storage = [
+            'test_name123' => 'test_value123',
+        ];
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $handler = function () use ($self, &$called) {
+            $responseProphecy = $self->prophesize(ResponseInterface::class);
+            return $responseProphecy->reveal();
+        };
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, $handler);
+
+        $requestProphecy = $this->prophesize(ServerRequestInterface::class);
+        $requestProphecy
+            ->getMethod()
+            ->willReturn('POST')
+            ->shouldBeCalledOnce();
+
+        $requestProphecy
+            ->withAttribute(Argument::type('string'), Argument::type('string'))
+            ->willReturn($requestProphecy->reveal())
+            ->shouldBeCalledTimes(2);
+
+        $requestProphecy
+            ->getParsedBody()
+            ->willReturn([
+                'test_name' => 'test_name123',
+                'test_value' => 'test_value123',
+            ])
+            ->shouldBeCalledOnce();
+
+        $responseProphecy = $this->prophesize(ResponseInterface::class);
+        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
+        $requestHandlerProphecy
+            ->handle(Argument::type(ServerRequestInterface::class))
+            ->willReturn(
+                $responseProphecy->reveal()
+            )->shouldBecalledOnce();
+
+        $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
+        $this->assertArrayNotHasKey('test_name123', $storage);
+    }
+
     public function testProcessAppendsNewTokensWhenPersistentTokenModeIsOff()
     {
         $storage = [];
