@@ -405,16 +405,16 @@ class Guard implements MiddlewareInterface
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
+        $body = $request->getParsedBody();
+        $name = null;
+        $value = null;
+
+        if (is_array($body)) {
+            $name = $body[$this->getTokenNameKey()] ?? null;
+            $value = $body[$this->getTokenValueKey()] ?? null;
+        }
+
         if (in_array($request->getMethod(), ['POST', 'PUT', 'DELETE', 'PATCH'])) {
-            $body = $request->getParsedBody();
-            $name = null;
-            $value = null;
-
-            if (is_array($body)) {
-                $name = $body[$this->getTokenNameKey()] ?? null;
-                $value = $body[$this->getTokenValueKey()] ?? null;
-            }
-
             $isValid = $this->validateToken((string) $name, (string) $value);
             if ($isValid && !$this->persistentTokenMode) {
                 // successfully validated token, so delete it if not in persistentTokenMode
@@ -423,6 +423,11 @@ class Guard implements MiddlewareInterface
 
             if ($name === null || $value === null || !$isValid) {
                 $request = $this->appendNewTokenToRequest($request);
+                return $this->handleFailure($request, $handler);
+            }
+        } else {
+            // Method is GET/OPTIONS/HEAD/etc, so do not accept the token in the body of this request
+            if ($name !== null) {
                 return $this->handleFailure($request, $handler);
             }
         }
