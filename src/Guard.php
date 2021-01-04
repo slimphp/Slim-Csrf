@@ -415,14 +415,13 @@ class Guard implements MiddlewareInterface
                 $value = $body[$this->getTokenValueKey()] ?? null;
             }
 
-            if ($name === null
-                || $value === null
-                || !$this->validateToken((string) $name, (string) $value)
-            ) {
-                if (!$this->persistentTokenMode && is_string($name)) {
-                    $this->removeTokenFromStorage($name);
-                }
+            $isValid = $this->validateToken((string) $name, (string) $value);
+            if ($isValid && !$this->persistentTokenMode) {
+                // successfully validated token, so delete it if not in persistentTokenMode
+                $this->removeTokenFromStorage($name);
+            }
 
+            if ($name === null || $value === null || !$isValid) {
                 $request = $this->appendNewTokenToRequest($request);
                 return $this->handleFailure($request, $handler);
             }
