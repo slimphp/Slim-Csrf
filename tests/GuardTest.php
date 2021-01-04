@@ -279,42 +279,34 @@ class GuardTest extends TestCase
 
     public function testTokenIsRemovedFromStorageWhenPersistentModeIsOff()
     {
-        $self = $this;
-
         $storage = [
             'test_name' => 'test_value123',
         ];
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $handler = function () use ($self, &$called) {
-            $responseProphecy = $self->prophesize(ResponseInterface::class);
-            return $responseProphecy->reveal();
+
+        $response = $this->createMock(ResponseInterface::class);
+        $requestHandler = $this->createMock(RequestHandlerInterface::class);
+        $requestHandler->method('handle')->willReturn($response);
+
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+
+        $handler = function () use ($response) {
+            return $response;
         };
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, $handler);
 
-        $requestProphecy = $this->prophesize(ServerRequestInterface::class);
-        $requestProphecy
-            ->getMethod()
-            ->willReturn('POST')
-            ->shouldBeCalledOnce();
+        $mw = new Guard($responseFactory, 'test', $storage, $handler);
 
-        $requestProphecy
-            ->withAttribute(Argument::type('string'), Argument::type('string'))
-            ->willReturn($requestProphecy->reveal())
-            ->shouldBeCalledTimes(2);
+        $request = $this->createMock(ServerRequestInterface::class);
+        $request->expects(self::once())->method('getMethod')->willReturn('POST');
+        $request->expects(self::exactly(2))->method('withAttribute')->willReturn($request);
+        $request->expects(self::once())->method('getParsedBody')->willReturn([
+           'test_name' => 'test_name',
+           'test_value' => 'test_value123',
+        ]);
 
-        $requestProphecy
-            ->getParsedBody()
-            ->willReturn([
-                'test_name' => 'test_name123',
-                'test_value' => 'invalid_value',
-            ])
-            ->shouldBeCalledOnce();
-
-        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
-
-        $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
-        $this->assertArrayNotHasKey('test_name123', $storage);
+        $mw->process($request, $requestHandler);
+        self::assertArrayNotHasKey('test_name', $storage);
     }
+
 
     public function testProcessAppendsNewTokensWhenPersistentTokenModeIsOff()
     {
