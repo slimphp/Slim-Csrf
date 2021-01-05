@@ -283,27 +283,37 @@ class GuardTest extends TestCase
             'test_name' => 'test_value123',
         ];
 
-        $response = $this->createMock(ResponseInterface::class);
-        $requestHandler = $this->createMock(RequestHandlerInterface::class);
-        $requestHandler->method('handle')->willReturn($response);
+        $responseProphecy = $this->prophesize(ResponseInterface::class)
+            ->willImplement(ResponseInterface::class);
 
-        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
+        $requestHandlerProphecy
+            ->handle(Argument::type(ServerRequestInterface::class))
+            ->willReturn($responseProphecy->reveal());
 
-        $handler = function () use ($response) {
-            return $response;
-        };
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
 
-        $mw = new Guard($responseFactory, 'test', $storage, $handler);
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
 
-        $request = $this->createMock(ServerRequestInterface::class);
-        $request->expects(self::once())->method('getMethod')->willReturn('POST');
-        $request->expects(self::exactly(2))->method('withAttribute')->willReturn($request);
-        $request->expects(self::once())->method('getParsedBody')->willReturn([
-           'test_name' => 'test_name',
-           'test_value' => 'test_value123',
-        ]);
+        $requestProphecy = $this->prophesize(ServerRequestInterface::class);
+        $requestProphecy
+            ->getMethod()
+            ->willReturn('POST')
+            ->shouldBeCalledOnce();
+        $requestProphecy
+            ->withAttribute(Argument::type('string'), Argument::type('string'))
+            ->willReturn($requestProphecy->reveal())
+            ->shouldBeCalledTimes(2);
+        $requestProphecy
+            ->getParsedBody()
+            ->willReturn([
+                'test_name' => 'test_name',
+                'test_value' => 'test_value123',
+            ])
+            ->shouldBeCalledOnce();
 
-        $mw->process($request, $requestHandler);
+
+        $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
         self::assertArrayNotHasKey('test_name', $storage);
     }
 
