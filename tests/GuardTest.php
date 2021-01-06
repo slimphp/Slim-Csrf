@@ -289,7 +289,8 @@ class GuardTest extends TestCase
         $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
         $requestHandlerProphecy
             ->handle(Argument::type(ServerRequestInterface::class))
-            ->willReturn($responseProphecy->reveal());
+            ->willReturn($responseProphecy->reveal())
+            ->shouldBeCalledOnce();
 
         $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
 
