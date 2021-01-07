@@ -19,8 +19,8 @@ before_script:
   - composer install -n
 
 script:
-  - if [[ "$ANALYSIS" != 'true' ]]; then vendor/bin/phpunit ; fi
-  - if [[ "$ANALYSIS" == 'true' ]]; then vendor/bin/phpunit --coverage-clover clover.xml ; fi
+  - if [[ "$ANALYSIS" != 'true' ]]; then XDEBUG_MODE=coverage ./vendor/bin/phpunit; fi
+  - if [[ "$ANALYSIS" == 'true' ]]; then XDEBUG_MODE=coverage ./vendor/bin/phpunit --coverage-clover clover.xml ; fi
 
 after_success:
   - if [[ "$ANALYSIS" == 'true' ]]; then vendor/bin/php-coveralls --coverage_clover=clover.xml -v ; fi

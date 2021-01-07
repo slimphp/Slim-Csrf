@@ -279,42 +279,45 @@ class GuardTest extends TestCase
 
     public function testTokenIsRemovedFromStorageWhenPersistentModeIsOff()
     {
-        $self = $this;
-
         $storage = [
             'test_name' => 'test_value123',
         ];
+
+        $responseProphecy = $this->prophesize(ResponseInterface::class)
+            ->willImplement(ResponseInterface::class);
+
+        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
+        $requestHandlerProphecy
+            ->handle(Argument::type(ServerRequestInterface::class))
+            ->willReturn($responseProphecy->reveal())
+            ->shouldBeCalledOnce();
+
         $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $handler = function () use ($self, &$called) {
-            $responseProphecy = $self->prophesize(ResponseInterface::class);
-            return $responseProphecy->reveal();
-        };
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, $handler);
+
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
 
         $requestProphecy = $this->prophesize(ServerRequestInterface::class);
         $requestProphecy
             ->getMethod()
             ->willReturn('POST')
             ->shouldBeCalledOnce();
-
         $requestProphecy
             ->withAttribute(Argument::type('string'), Argument::type('string'))
             ->willReturn($requestProphecy->reveal())
             ->shouldBeCalledTimes(2);
-
         $requestProphecy
             ->getParsedBody()
             ->willReturn([
-                'test_name' => 'test_name123',
-                'test_value' => 'invalid_value',
+                'test_name' => 'test_name',
+                'test_value' => 'test_value123',
             ])
             ->shouldBeCalledOnce();
 
-        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
 
         $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
-        $this->assertArrayNotHasKey('test_name123', $storage);
+        self::assertArrayNotHasKey('test_name', $storage);
     }
+
 
     public function testProcessAppendsNewTokensWhenPersistentTokenModeIsOff()
     {
