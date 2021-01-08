@@ -318,6 +318,43 @@ class GuardTest extends TestCase
         self::assertArrayNotHasKey('test_name', $storage);
     }
 
+    public function testTokenInBodyofGetIsInvalid()
+    {
+        $storage = [
+            'test_name' => 'test_value123',
+        ];
+
+        // we set up a failure handler that we expect to be called because a GET cannot have a token
+        $self = $this;
+        $failureHandlerCalled = 0;
+        $failureHandler = function () use ($self, &$failureHandlerCalled) {
+            $failureHandlerCalled++;
+            $responseProphecy = $self->prophesize(ResponseInterface::class);
+            return $responseProphecy->reveal();
+        };
+
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, $failureHandler);
+
+        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
+
+        $requestProphecy = $this->prophesize(ServerRequestInterface::class);
+        $requestProphecy
+            ->getMethod()
+            ->willReturn('GET')
+            ->shouldBeCalledOnce();
+        $requestProphecy
+            ->getParsedBody()
+            ->willReturn([
+                'test_name' => 'test_name',
+                'test_value' => 'test_value123',
+            ])
+            ->shouldBeCalledOnce();
+
+        $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
+        self::assertSame(1, $failureHandlerCalled);
+    }
 
     public function testProcessAppendsNewTokensWhenPersistentTokenModeIsOff()
     {
@@ -328,6 +365,7 @@ class GuardTest extends TestCase
         $responseProphecy = $this->prophesize(ResponseInterface::class);
 
         $requestProphecy = $this->prophesize(ServerRequestInterface::class);
+        $requestProphecy->getParsedBody()->willReturn(null)->shouldBeCalledOnce();
         $requestProphecy
             ->getMethod()
             ->willReturn('GET')
@@ -359,6 +397,7 @@ class GuardTest extends TestCase
         $responseProphecy = $this->prophesize(ResponseInterface::class);
 
         $requestProphecy = $this->prophesize(ServerRequestInterface::class);
+        $requestProphecy->getParsedBody()->willReturn(null)->shouldBeCalledOnce();
         $requestProphecy
             ->getMethod()
             ->willReturn('GET')
