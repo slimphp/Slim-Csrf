@@ -13,6 +13,7 @@ use ArrayIterator;
 use Exception;
 use PHPUnit\Framework\TestCase;
 use Prophecy\Argument;
+use Prophecy\PhpUnit\ProphecyTrait;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -24,26 +25,28 @@ use Slim\Csrf\Guard;
 
 class GuardTest extends TestCase
 {
-    /**
-     * @expectedException Exception
-     * @expectedExceptionMessage CSRF middleware instantiation failed. Minimum strength is 16.
-     */
+    use ProphecyTrait;
+
     public function testStrengthLowerThan16ThrowsException()
     {
         $storage = [];
         $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 200, 15);
+
+        $this->expectException(Exception::class);
+        $this->expectExceptionMessage('CSRF middleware instantiation failed. Minimum strength is 16.');
+        new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 200, 15);
     }
 
     /**
-     * @expectedException RuntimeException
-     * @expectedExceptionMessage Invalid CSRF storage.
      * Use session_start() before instantiating the Guard middleware or provide array storage.
      */
     public function testSetStorageThrowsExceptionWhenFallingBackOnSessionThatHasNotBeenStarted()
     {
         $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test');
+
+        $this->expectException(Exception::class);
+        $this->expectExceptionMessage('Invalid CSRF storage.');
+        new Guard($responseFactoryProphecy->reveal(), 'test');
     }
 
     /**
@@ -53,7 +56,7 @@ class GuardTest extends TestCase
     {
         session_start();
         $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test');
+        new Guard($responseFactoryProphecy->reveal(), 'test');
 
         $this->assertArrayHasKey('test', $_SESSION);
     }
