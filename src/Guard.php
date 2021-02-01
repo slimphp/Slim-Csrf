@@ -289,10 +289,20 @@ class Guard implements MiddlewareInterface
             return null;
         }
 
-        end($this->storage);
-        $name = key($this->storage);
-        $value = $this->storage[$name];
-        reset($this->storage);
+        $name = null;
+        $value = null;
+        if (is_array($this->storage)) {
+            end($this->storage);
+            $name = key($this->storage);
+            $value = $this->storage[$name];
+            reset($this->storage);
+        } elseif ($this->storage instanceof Iterator) {
+            while ($this->storage->valid()) {
+                $this->storage->next();
+            }
+            $name = $this->storage->key();
+            $value = $this->storage->current();
+        }
 
         return $name !== null && $value !== null
             ? [
