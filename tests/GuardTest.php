@@ -428,7 +428,6 @@ class GuardTest extends TestCase
 
     public function testCanGetLastKeyPairFromIterator()
     {
-
         $storage = new ArrayIterator([
             'test_key1' => 'value1',
             'test_key2' => 'value2',
