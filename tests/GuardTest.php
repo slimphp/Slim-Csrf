@@ -425,4 +425,24 @@ class GuardTest extends TestCase
 
         $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
     }
+
+    public function testCanGetLastKeyPairFromIterator()
+    {
+        $storage = new ArrayIterator([
+            'test_key1' => 'value1',
+            'test_key2' => 'value2',
+        ]);
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 1);
+
+        $enforceStorageLimitMethod = new ReflectionMethod($mw, 'getLastKeyPair');
+        $enforceStorageLimitMethod->setAccessible(true);
+        $keyPair = $enforceStorageLimitMethod->invoke($mw);
+
+        $this->assertIsArray($keyPair);
+        $this->assertArrayHasKey('test_name', $keyPair);
+        $this->assertArrayHasKey('test_value', $keyPair);
+        $this->assertEquals('test_key2', $keyPair['test_name']);
+        $this->assertEquals('value2', $keyPair['test_value']);
+    }
 }
