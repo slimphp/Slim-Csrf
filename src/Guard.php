@@ -282,8 +282,7 @@ class Guard implements MiddlewareInterface
      */
     protected function getLastKeyPair(): ?array
     {
-        if (
-            (is_array($this->storage) && empty($this->storage))
+        if ((is_array($this->storage) && empty($this->storage))
             || ($this->storage instanceof Countable && count($this->storage) < 1)
         ) {
             return null;
