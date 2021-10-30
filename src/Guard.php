@@ -209,7 +209,7 @@ class Guard implements MiddlewareInterface
             $this->getTokenNameKey() => $name,
             $this->getTokenValueKey() => $value
         ];
-
+        $this->enforceStorageLimit();
         return $this->keyPair;
     }
 
@@ -388,6 +388,7 @@ class Guard implements MiddlewareInterface
     public function appendNewTokenToRequest(ServerRequestInterface $request): ServerRequestInterface
     {
         $token = $this->generateToken();
+        $this->enforceStorageLimit();
         return $this->appendTokenToRequest($request, $token);
     }
 
@@ -449,7 +450,6 @@ class Guard implements MiddlewareInterface
             $pair = $this->loadLastKeyPair() ? $this->keyPair : $this->generateToken();
             $request = $this->appendTokenToRequest($request, $pair);
         }
-
         $this->enforceStorageLimit();
 
         return $handler->handle($request);
