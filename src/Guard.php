@@ -388,7 +388,6 @@ class Guard implements MiddlewareInterface
     public function appendNewTokenToRequest(ServerRequestInterface $request): ServerRequestInterface
     {
         $token = $this->generateToken();
-        $this->enforceStorageLimit();
         return $this->appendTokenToRequest($request, $token);
     }
 
