@@ -421,6 +421,7 @@ class Guard implements MiddlewareInterface
     {
         $body = $request->getParsedBody();
         $args = $request->getQueryParams();
+        $headers = $request->getHeaders();
         $name = null;
         $value = null;
 
@@ -428,14 +429,17 @@ class Guard implements MiddlewareInterface
             $name = $body[$this->getTokenNameKey()] ?? null;
             $value = $body[$this->getTokenValueKey()] ?? null;
         }
-        if (($name == null || $value == null)  && isset($args[$this->getTokenNameKey()], $args[$this->getTokenValueKey()])) {
+        if (($name == null || $value == null) && isset($args[$this->getTokenNameKey()], $args[$this->getTokenValueKey()])) {
             $name = $args[$this->getTokenNameKey()];
             $value = $args[$this->getTokenValueKey()];
+        }
+        if (($name == null || $value == null) && isset($headers[$this->getTokenNameKey()], $headers[$this->getTokenValueKey()])) {
+            $name = $headers[$this->getTokenNameKey()];
+            $value = $headers[$this->getTokenValueKey()];
         }
         if (in_array($request->getMethod(), $this->Validatedmethods)) {
             $isValid = $this->validateToken((string) $name, (string) $value);
             if ($isValid && !$this->persistentTokenMode) {
-                // successfully validated token, so delete it if not in persistentTokenMode
                 $this->removeTokenFromStorage($name);
             }
 
@@ -444,7 +448,6 @@ class Guard implements MiddlewareInterface
                 return $this->handleFailure($request, $handler);
             }
         } else {
-            // Method is GET/OPTIONS/HEAD/etc, so do not accept the token in the body of this request
             if ($name !== null) {
                 return $this->handleFailure($request, $handler);
             }
