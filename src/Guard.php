@@ -91,6 +91,7 @@ class Guard implements MiddlewareInterface
      * @param integer                   $storageLimit
      * @param integer                   $strength
      * @param boolean                   $persistentTokenMode
+     * @param Array                     $ValidatedMethods
      * @throws RuntimeException if the session cannot be found
      */
     public function __construct(
@@ -100,7 +101,9 @@ class Guard implements MiddlewareInterface
         ?callable $failureHandler = null,
         int $storageLimit = 200,
         int $strength = 16,
-        bool $persistentTokenMode = false
+        bool $persistentTokenMode = false,
+        array $ValidatedMethods = ['POST', 'PUT', 'DELETE', 'PATCH']
+        
     ) {
         if ($strength < 16) {
             throw new RuntimeException('CSRF middleware instantiation failed. Minimum strength is 16.');
@@ -417,6 +420,7 @@ class Guard implements MiddlewareInterface
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $body = $request->getParsedBody();
+        $args = $request->getQueryParams();
         $name = null;
         $value = null;
 
@@ -424,8 +428,11 @@ class Guard implements MiddlewareInterface
             $name = $body[$this->getTokenNameKey()] ?? null;
             $value = $body[$this->getTokenValueKey()] ?? null;
         }
-
-        if (in_array($request->getMethod(), ['POST', 'PUT', 'DELETE', 'PATCH'])) {
+        if (($name == null || $value == null)  && isset($args[$this->getTokenNameKey()], $args[$this->getTokenValueKey()])) {
+            $name = $args[$this->getTokenNameKey()];
+            $value = $args[$this->getTokenValueKey()];
+        }
+        if (in_array($request->getMethod(), $this->Validatedmethods)) {
             $isValid = $this->validateToken((string) $name, (string) $value);
             if ($isValid && !$this->persistentTokenMode) {
                 // successfully validated token, so delete it if not in persistentTokenMode
