@@ -258,7 +258,7 @@ class Guard implements MiddlewareInterface
      */
     public function getTokenNameKey(): string
     {
-        return $this->prefix . '_name';
+        return $this->prefix . '-name';
     }
 
     /**
@@ -266,7 +266,7 @@ class Guard implements MiddlewareInterface
      */
     public function getTokenValueKey(): string
     {
-        return $this->prefix . '_value';
+        return $this->prefix . '-value';
     }
 
     /**
@@ -417,6 +417,7 @@ class Guard implements MiddlewareInterface
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $body = $request->getParsedBody();
+        $headers = $request->getHeaders();
         $name = null;
         $value = null;
 
@@ -424,7 +425,10 @@ class Guard implements MiddlewareInterface
             $name = $body[$this->getTokenNameKey()] ?? null;
             $value = $body[$this->getTokenValueKey()] ?? null;
         }
-
+        if (($name == null || $value == null) && isset($headers[$this->getTokenNameKey()], $headers[$this->getTokenValueKey()])) {
+            $name = $headers[$this->getTokenNameKey()][0] ??   null;
+            $value = $headers[$this->getTokenValueKey()][0] ??  null;
+        }
         if (in_array($request->getMethod(), ['POST', 'PUT', 'DELETE', 'PATCH'])) {
             $isValid = $this->validateToken((string) $name, (string) $value);
             if ($isValid && !$this->persistentTokenMode) {
