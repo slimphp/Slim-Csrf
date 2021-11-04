@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Slim Framework (https://slimframework.com)
  *
@@ -161,16 +162,16 @@ class GuardTest extends TestCase
     public function testValidateToken()
     {
         $storage = [
-            'test_name' => 'value'
+            'test-name' => 'value'
         ];
         $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
         $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
 
-        $this->assertTrue($mw->validateToken('test_name', 'value'));
+        $this->assertTrue($mw->validateToken('test-name', 'value'));
 
         $GLOBALS['function_exists_return'] = false;
 
-        $this->assertTrue($mw->validateToken('test_name', 'value'));
+        $this->assertTrue($mw->validateToken('test-name', 'value'));
     }
 
     public function testGetTokenNameAndValue()
@@ -187,12 +188,12 @@ class GuardTest extends TestCase
         $loadLastKeyPairMethod->invoke($mw);
 
         $storage = [
-            'test_name' => 'value',
+            'test-name' => 'value',
         ];
         $mw->setStorage($storage);
         $loadLastKeyPairMethod->invoke($mw);
 
-        $this->assertEquals('test_name', $mw->getTokenName());
+        $this->assertEquals('test-name', $mw->getTokenName());
         $this->assertEquals('value', $mw->getTokenValue());
     }
 
@@ -211,30 +212,30 @@ class GuardTest extends TestCase
         $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
         $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
 
-        $this->assertEquals('test_name', $mw->getTokenNameKey());
-        $this->assertEquals('test_value', $mw->getTokenValueKey());
+        $this->assertEquals('test-name', $mw->getTokenNameKey());
+        $this->assertEquals('test-value', $mw->getTokenValueKey());
     }
 
     public function testRemoveTokenFromStorage()
     {
         $storage = [
-            'test_name' => 'value',
+            'test-name' => 'value',
         ];
         $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
         $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
 
         $removeTokenFromStorageMethod = new ReflectionMethod($mw, 'removeTokenFromStorage');
         $removeTokenFromStorageMethod->setAccessible(true);
-        $removeTokenFromStorageMethod->invoke($mw, 'test_name');
+        $removeTokenFromStorageMethod->invoke($mw, 'test-name');
 
-        $this->assertArrayNotHasKey('test_name', $storage);
+        $this->assertArrayNotHasKey('test-name', $storage);
     }
 
     public function testEnforceStorageLimitWithArray()
     {
         $storage = [
-            'test_name' => 'value',
-            'test_name2' => 'value2',
+            'test-name' => 'value',
+            'test-name2' => 'value2',
         ];
         $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
         $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 1);
@@ -243,15 +244,15 @@ class GuardTest extends TestCase
         $enforceStorageLimitMethod->setAccessible(true);
         $enforceStorageLimitMethod->invoke($mw);
 
-        $this->assertArrayNotHasKey('test_name', $storage);
-        $this->assertArrayHasKey('test_name2', $storage);
+        $this->assertArrayNotHasKey('test-name', $storage);
+        $this->assertArrayHasKey('test-name2', $storage);
     }
 
     public function testNotEnforceStorageLimitWithArrayWhenLimitIsZero()
     {
         $initial_storage = $storage = [
-            'test_name' => 'value',
-            'test_name2' => 'value2',
+            'test-name' => 'value',
+            'test-name2' => 'value2',
         ];
         $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
         $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 0);
@@ -266,8 +267,8 @@ class GuardTest extends TestCase
     public function testEnforceStorageLimitWithIterator()
     {
         $storage = new ArrayIterator([
-            'test_name' => 'value',
-            'test_name2' => 'value',
+            'test-name' => 'value',
+            'test-name2' => 'value',
         ]);
         $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
         $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 1);
@@ -276,14 +277,14 @@ class GuardTest extends TestCase
         $enforceStorageLimitMethod->setAccessible(true);
         $enforceStorageLimitMethod->invoke($mw);
 
-        $this->assertArrayNotHasKey('test_name', $storage);
-        $this->assertArrayHasKey('test_name2', $storage);
+        $this->assertArrayNotHasKey('test-name', $storage);
+        $this->assertArrayHasKey('test-name2', $storage);
     }
 
     public function testTokenIsRemovedFromStorageWhenPersistentModeIsOff()
     {
         $storage = [
-            'test_name' => 'test_value123',
+            'test-name' => 'test-value123',
         ];
 
         $responseProphecy = $this->prophesize(ResponseInterface::class)
@@ -311,20 +312,20 @@ class GuardTest extends TestCase
         $requestProphecy
             ->getParsedBody()
             ->willReturn([
-                'test_name' => 'test_name',
-                'test_value' => 'test_value123',
+                'test-name' => 'test-name',
+                'test-value' => 'test-value123',
             ])
             ->shouldBeCalledOnce();
 
 
         $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
-        self::assertArrayNotHasKey('test_name', $storage);
+        self::assertArrayNotHasKey('test-name', $storage);
     }
 
     public function testTokenInBodyofGetIsInvalid()
     {
         $storage = [
-            'test_name' => 'test_value123',
+            'test-name' => 'test-value123',
         ];
 
         // we set up a failure handler that we expect to be called because a GET cannot have a token
@@ -350,8 +351,8 @@ class GuardTest extends TestCase
         $requestProphecy
             ->getParsedBody()
             ->willReturn([
-                'test_name' => 'test_name',
-                'test_value' => 'test_value123',
+                'test-name' => 'test-name',
+                'test-value' => 'test-value123',
             ])
             ->shouldBeCalledOnce();
 
@@ -392,7 +393,7 @@ class GuardTest extends TestCase
     public function testProcessAppendsNewTokensWhenPersistentTokenModeIsOn()
     {
         $storage = [
-            'test_name123' => 'test_value123',
+            'test-name123' => 'test-value123',
         ];
         $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
         $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 200, 16, true);
@@ -407,12 +408,12 @@ class GuardTest extends TestCase
             ->shouldBeCalledOnce();
 
         $requestProphecy
-            ->withAttribute('test_name', 'test_name123')
+            ->withAttribute('test-name', 'test-name123')
             ->willReturn($requestProphecy->reveal())
             ->shouldBeCalledOnce();
 
         $requestProphecy
-            ->withAttribute('test_value', 'test_value123')
+            ->withAttribute('test-value', 'test-value123')
             ->willReturn($requestProphecy->reveal())
             ->shouldBeCalledOnce();
 
@@ -429,8 +430,8 @@ class GuardTest extends TestCase
     public function testCanGetLastKeyPairFromIterator()
     {
         $storage = new ArrayIterator([
-            'test_key1' => 'value1',
-            'test_key2' => 'value2',
+            'test-key1' => 'value1',
+            'test-key2' => 'value2',
         ]);
         $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
         $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 1);
@@ -440,9 +441,9 @@ class GuardTest extends TestCase
         $keyPair = $enforceStorageLimitMethod->invoke($mw);
 
         $this->assertIsArray($keyPair);
-        $this->assertArrayHasKey('test_name', $keyPair);
-        $this->assertArrayHasKey('test_value', $keyPair);
-        $this->assertEquals('test_key2', $keyPair['test_name']);
-        $this->assertEquals('value2', $keyPair['test_value']);
+        $this->assertArrayHasKey('test-name', $keyPair);
+        $this->assertArrayHasKey('test-value', $keyPair);
+        $this->assertEquals('test-key2', $keyPair['test-name']);
+        $this->assertEquals('value2', $keyPair['test-value']);
     }
 }
