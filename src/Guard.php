@@ -425,7 +425,7 @@ class Guard implements MiddlewareInterface
             $name = $body[$this->getTokenNameKey()] ?? null;
             $value = $body[$this->getTokenValueKey()] ?? null;
         }
-        if (($name == null || $value == null) && isset($headers[$this->getTokenNameKey()], $headers[$this->getTokenValueKey()])) {
+        if (($name == null || $value == null) && is_array($headers)) {
             $name = $headers[$this->getTokenNameKey()][0] ??   null;
             $value = $headers[$this->getTokenValueKey()][0] ??  null;
         }
