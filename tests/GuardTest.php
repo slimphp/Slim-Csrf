@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Slim Framework (https://slimframework.com)
  *
@@ -167,8 +168,6 @@ class GuardTest extends TestCase
         $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
 
         $this->assertTrue($mw->validateToken('test_name', 'value'));
-
-        $GLOBALS['function_exists_return'] = false;
 
         $this->assertTrue($mw->validateToken('test_name', 'value'));
     }

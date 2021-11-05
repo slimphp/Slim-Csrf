@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Slim Framework (https://slimframework.com)
  *
@@ -125,11 +126,9 @@ class Guard implements MiddlewareInterface
      */
     public function setStorage(&$storage = null): self
     {
-        if (is_array($storage)
-            || ($storage instanceof ArrayAccess
-                && $storage instanceof Countable
-                && $storage instanceof Iterator
-            )
+        if (
+            is_array($storage)
+            || ($storage instanceof ArrayAccess && $storage instanceof Countable && $storage instanceof Iterator)
         ) {
             $this->storage = &$storage;
             return $this;
@@ -230,11 +229,7 @@ class Guard implements MiddlewareInterface
 
         $token = $this->storage[$name];
 
-        if (function_exists('hash_equals')) {
-            return hash_equals($token, $value);
-        }
-
-        return $token === $value;
+        return hash_equals($token, $value);
     }
 
     /**
@@ -282,7 +277,8 @@ class Guard implements MiddlewareInterface
      */
     protected function getLastKeyPair(): ?array
     {
-        if ((is_array($this->storage) && empty($this->storage))
+        if (
+            (is_array($this->storage) && empty($this->storage))
             || ($this->storage instanceof Countable && count($this->storage) < 1)
         ) {
             return null;
@@ -354,7 +350,8 @@ class Guard implements MiddlewareInterface
      */
     protected function enforceStorageLimit(): void
     {
-        if ($this->storageLimit === 0
+        if (
+            $this->storageLimit === 0
             || (
                 !is_array($this->storage)
                 && !($this->storage instanceof Countable && $this->storage instanceof Iterator)
