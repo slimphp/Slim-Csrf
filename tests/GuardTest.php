@@ -8,10 +8,9 @@
 
 declare(strict_types=1);
 
-namespace Slim\Tests\Csrf;
+namespace Slim\Csrf\Tests;
 
 use ArrayIterator;
-use Exception;
 use PHPUnit\Framework\TestCase;
 use Prophecy\Argument;
 use Prophecy\PhpUnit\ProphecyTrait;
@@ -24,6 +23,8 @@ use ReflectionMethod;
 use RuntimeException;
 use Slim\Csrf\Guard;
 
+use function session_start;
+
 class GuardTest extends TestCase
 {
     use ProphecyTrait;
@@ -33,7 +34,7 @@ class GuardTest extends TestCase
         $storage = [];
         $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
 
-        $this->expectException(Exception::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('CSRF middleware instantiation failed. Minimum strength is 16.');
         new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 200, 15);
     }
@@ -45,7 +46,7 @@ class GuardTest extends TestCase
     {
         $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
 
-        $this->expectException(Exception::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Invalid CSRF storage.');
         new Guard($responseFactoryProphecy->reveal(), 'test');
     }

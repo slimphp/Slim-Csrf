@@ -21,6 +21,25 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use RuntimeException;
 
+use function array_key_exists;
+use function array_shift;
+use function bin2hex;
+use function call_user_func;
+use function count;
+use function end;
+use function hash_equals;
+use function in_array;
+use function is_array;
+use function is_callable;
+use function key;
+use function random_bytes;
+use function reset;
+use function rtrim;
+use function session_status;
+use function uniqid;
+
+use const PHP_SESSION_ACTIVE;
+
 class Guard implements MiddlewareInterface
 {
     /**
