@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Slim Framework (https://slimframework.com)
  *
@@ -19,6 +20,25 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use RuntimeException;
+
+use function array_key_exists;
+use function array_shift;
+use function bin2hex;
+use function call_user_func;
+use function count;
+use function end;
+use function hash_equals;
+use function in_array;
+use function is_array;
+use function is_callable;
+use function key;
+use function random_bytes;
+use function reset;
+use function rtrim;
+use function session_status;
+use function uniqid;
+
+use const PHP_SESSION_ACTIVE;
 
 class Guard implements MiddlewareInterface
 {
@@ -125,11 +145,9 @@ class Guard implements MiddlewareInterface
      */
     public function setStorage(&$storage = null): self
     {
-        if (is_array($storage)
-            || ($storage instanceof ArrayAccess
-                && $storage instanceof Countable
-                && $storage instanceof Iterator
-            )
+        if (
+            is_array($storage)
+            || ($storage instanceof ArrayAccess && $storage instanceof Countable && $storage instanceof Iterator)
         ) {
             $this->storage = &$storage;
             return $this;
@@ -230,11 +248,7 @@ class Guard implements MiddlewareInterface
 
         $token = $this->storage[$name];
 
-        if (function_exists('hash_equals')) {
-            return hash_equals($token, $value);
-        }
-
-        return $token === $value;
+        return hash_equals($token, $value);
     }
 
     /**
@@ -282,7 +296,8 @@ class Guard implements MiddlewareInterface
      */
     protected function getLastKeyPair(): ?array
     {
-        if ((is_array($this->storage) && empty($this->storage))
+        if (
+            (is_array($this->storage) && empty($this->storage))
             || ($this->storage instanceof Countable && count($this->storage) < 1)
         ) {
             return null;
@@ -354,7 +369,8 @@ class Guard implements MiddlewareInterface
      */
     protected function enforceStorageLimit(): void
     {
-        if ($this->storageLimit === 0
+        if (
+            $this->storageLimit === 0
             || (
                 !is_array($this->storage)
                 && !($this->storage instanceof Countable && $this->storage instanceof Iterator)
