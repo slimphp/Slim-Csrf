@@ -23,6 +23,8 @@ use RuntimeException;
 
 use function array_key_exists;
 use function array_shift;
+use function base64_decode;
+use function base64_encode;
 use function bin2hex;
 use function call_user_func;
 use function count;
@@ -31,11 +33,14 @@ use function hash_equals;
 use function in_array;
 use function is_array;
 use function is_callable;
+use function is_int;
 use function key;
 use function random_bytes;
 use function reset;
 use function rtrim;
 use function session_status;
+use function strlen;
+use function substr;
 use function uniqid;
 
 use const PHP_SESSION_ACTIVE;
@@ -225,7 +230,7 @@ class Guard implements MiddlewareInterface
 
         $this->keyPair = [
             $this->getTokenNameKey() => $name,
-            $this->getTokenValueKey() => $value
+            $this->getTokenValueKey() => $this->maskToken($value)
         ];
         $this->enforceStorageLimit();
         return $this->keyPair;
@@ -248,7 +253,7 @@ class Guard implements MiddlewareInterface
 
         $token = $this->storage[$name];
 
-        return hash_equals($token, $value);
+        return hash_equals($token, $this->unmaskToken($value));
     }
 
     /**
@@ -293,6 +298,8 @@ class Guard implements MiddlewareInterface
 
     /**
      * @return string[]|null
+     *
+     * @throws Exception
      */
     protected function getLastKeyPair(): ?array
     {
@@ -323,7 +330,7 @@ class Guard implements MiddlewareInterface
         return $name !== null && $value !== null
             ? [
                 $this->getTokenNameKey() => $name,
-                $this->getTokenValueKey() => $value
+                $this->getTokenValueKey() => $this->maskToken($value)
             ]
             : null;
     }
@@ -332,6 +339,8 @@ class Guard implements MiddlewareInterface
      * Load the most recent key pair in storage.
      *
      * @return bool `true` if there was a key pair to load in storage, false otherwise.
+     *
+     * @throws Exception
      */
     protected function loadLastKeyPair(): bool
     {
@@ -489,5 +498,46 @@ class Guard implements MiddlewareInterface
         }
 
         return call_user_func($this->failureHandler, $request, $handler);
+    }
+
+    /**
+     * Mask token using random key and doing a XOR between this key and provided token. It will prevent BREACH attack.
+     *
+     * @param string $token Token to mask
+     *
+     * @return string Masked token, base64 encoded
+     *
+     * @throws Exception
+     */
+    private function maskToken(string $token): string
+    {
+        // Key length need to be the same as the length of the token
+        $key = random_bytes(strlen($token));
+        return base64_encode($key . ($key ^ $token));
+    }
+
+    /**
+     * @param string $maskedToken Masked token, base64 encoded
+     *
+     * @return string Unmasked token
+     *
+     * @see maskToken()
+     */
+    private function unmaskToken(string $maskedToken): string
+    {
+        $decoded = base64_decode($maskedToken, true);
+        if ($decoded === false) {
+            return '';
+        }
+        $tokenLength = strlen($decoded) / 2;
+        // If $tokenLength is not an int value, token is invalid (token length and key length need to be the same)
+        if (!is_int($tokenLength)) {
+            return '';
+        }
+
+        $key = substr($decoded, 0, $tokenLength);
+        $decodedMaskedToken = substr($decoded, $tokenLength, $tokenLength);
+
+        return $key ^ $decodedMaskedToken;
     }
 }
