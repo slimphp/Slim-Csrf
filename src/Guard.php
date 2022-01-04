@@ -93,13 +93,13 @@ class Guard implements MiddlewareInterface
     protected ?array $keyPair = null;
 
     /**
-     * @param ResponseFactoryInterface  $responseFactory
-     * @param string                    $prefix
-     * @param null|array|ArrayAccess    $storage
-     * @param null|callable             $failureHandler
-     * @param integer                   $storageLimit
-     * @param integer                   $strength
-     * @param boolean                   $persistentTokenMode
+     * @param  ResponseFactoryInterface $responseFactory
+     * @param  string                   $prefix
+     * @param  array|ArrayAccess|null   $storage
+     * @param  callable|null            $failureHandler
+     * @param  int                      $storageLimit
+     * @param  int                      $strength
+     * @param  bool                     $persistentTokenMode
      *
      * @throws RuntimeException if the session cannot be found
      */
@@ -127,7 +127,7 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * @param null|array|ArrayAccess $storage
+     * @param  array|ArrayAccess|null $storage
      *
      * @return self
      *
@@ -159,7 +159,8 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * @param callable|null $failureHandler Value to set
+     * @param  callable|null $failureHandler Value to set
+     *
      * @return self
      */
     public function setFailureHandler(?callable $failureHandler): self
@@ -169,8 +170,9 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * @param bool $persistentTokenMode True to use the same token throughout the session
+     * @param  bool $persistentTokenMode True to use the same token throughout the session
      * (unless there is a validation error), false to get a new token with each request.
+     *
      * @return self
      */
     public function setPersistentTokenMode(bool $persistentTokenMode): self
@@ -180,9 +182,9 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * @param integer $storageLimit Value to set
+     * @param  int $storageLimit Value to set
      *
-     * @return $this
+     * @return self
      */
     public function setStorageLimit(int $storageLimit): self
     {
@@ -242,7 +244,7 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * @return string
+     * @return string|null
      */
     public function getTokenName(): ?string
     {
@@ -250,7 +252,7 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * @return string
+     * @return string|null
      */
     public function getTokenValue(): ?string
     {
@@ -343,6 +345,8 @@ class Guard implements MiddlewareInterface
      * Remove token from storage
      *
      * @param  string $name CSRF token name
+     *
+     * @return void
      */
     public function removeTokenFromStorage(string $name): void
     {
@@ -356,6 +360,8 @@ class Guard implements MiddlewareInterface
      *
      * This is required as a token is generated every request and so
      * most will never be used.
+     *
+     * @return void
      */
     protected function enforceStorageLimit(): void
     {
@@ -385,7 +391,7 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * @param ServerRequestInterface $request
+     * @param  ServerRequestInterface $request
      *
      * @return ServerRequestInterface
      *
@@ -398,8 +404,8 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * @param ServerRequestInterface $request
-     * @param array $pair
+     * @param  ServerRequestInterface $request
+     * @param  array $pair
      *
      * @return ServerRequestInterface
      */
@@ -413,8 +419,8 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * @param ServerRequestInterface  $request
-     * @param RequestHandlerInterface $handler
+     * @param  ServerRequestInterface  $request
+     * @param  RequestHandlerInterface $handler
      *
      * @return ResponseInterface
      *
@@ -461,8 +467,8 @@ class Guard implements MiddlewareInterface
     }
 
     /**
-     * @param ServerRequestInterface  $request
-     * @param RequestHandlerInterface $handler
+     * @param  ServerRequestInterface  $request
+     * @param  RequestHandlerInterface $handler
      *
      * @return ResponseInterface
      */
