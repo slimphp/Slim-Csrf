@@ -6,15 +6,10 @@ jobs:
     tests:
         name: Tests PHP ${{ matrix.php }}
         runs-on: ubuntu-latest
-        continue-on-error: ${{ matrix.experimental }}
         strategy:
             fail-fast: false
             matrix:
-                php: [7.3, 7.4, 8.0, 8.1]
-                experimental: [false]
-                include:
-                    - php: 8.1
-                      analysis: true
+                php: [7.4, 8.0, 8.1]
 
         steps:
             - name: Checkout
@@ -30,7 +25,6 @@ jobs:
               uses: ramsey/composer-install@v1
 
             - name: Coding standards
-              if: matrix.analysis
               run: vendor/bin/phpcs
 
             - name: Tests
