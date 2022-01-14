@@ -321,7 +321,7 @@ class GuardTest extends TestCase
         self::assertArrayNotHasKey('test_name', $storage);
     }
 
-    public function testTokenInBodyofGetIsInvalid()
+    public function testTokenInBodyOfGetIsInvalid()
     {
         $storage = [
             'test_name' => 'test_value123',
