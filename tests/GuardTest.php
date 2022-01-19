@@ -19,15 +19,35 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use ReflectionException;
 use ReflectionMethod;
 use RuntimeException;
 use Slim\Csrf\Guard;
 
 use function session_start;
+use function substr;
 
 class GuardTest extends TestCase
 {
     use ProphecyTrait;
+
+    /**
+     * Helper function to mask a token using private method {@link Guard::maskToken()}
+     *
+     * @param Guard $middleware instance of the csrf middleware
+     * @param string $token token to mask
+     *
+     * @return string masked token
+     *
+     * @throws ReflectionException
+     */
+    private function maskToken(Guard $middleware, string $token): string
+    {
+        $maskTokenMethod = new ReflectionMethod($middleware, 'maskToken');
+        $maskTokenMethod->setAccessible(true);
+
+        return $maskTokenMethod->invoke($middleware, $token);
+    }
 
     public function testStrengthLowerThan16ThrowsException()
     {
@@ -168,9 +188,30 @@ class GuardTest extends TestCase
         $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
         $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
 
-        $this->assertTrue($mw->validateToken('test_name', 'value'));
+        $maskedToken = $this->maskToken($mw, 'value');
+        $this->assertTrue($mw->validateToken('test_name', $maskedToken));
 
-        $this->assertTrue($mw->validateToken('test_name', 'value'));
+        $maskedToken2 = $this->maskToken($mw, 'value');
+        $this->assertTrue($mw->validateToken('test_name', $maskedToken2));
+
+        $this->assertNotSame($maskedToken, $maskedToken2);
+    }
+
+    public function testNotValidatingBadToken()
+    {
+        $storage = [
+            'test_name' => 'value'
+        ];
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
+
+        $maskedToken = 'MY_BAD_BASE64???';
+        $this->assertFalse($mw->validateToken('test_name', $maskedToken), 'Token contains bad base64 characters');
+
+        $maskedToken2 = $this->maskToken($mw, 'value');
+        // Remove some part of base64
+        $maskedToken2 = substr($maskedToken2, 0, -6);
+        $this->assertFalse($mw->validateToken('test_name', $maskedToken2), 'Token size should be even');
     }
 
     public function testGetTokenNameAndValue()
@@ -193,7 +234,11 @@ class GuardTest extends TestCase
         $loadLastKeyPairMethod->invoke($mw);
 
         $this->assertEquals('test_name', $mw->getTokenName());
-        $this->assertEquals('value', $mw->getTokenValue());
+
+        $unmaskTokenMethod = new ReflectionMethod($mw, 'unmaskToken');
+        $unmaskTokenMethod->setAccessible(true);
+        $unmaskedToken = $unmaskTokenMethod->invoke($mw, $mw->getTokenValue());
+        $this->assertEquals('value', $unmaskedToken);
     }
 
     public function testGetPersistentTokenMode()
@@ -312,7 +357,7 @@ class GuardTest extends TestCase
             ->getParsedBody()
             ->willReturn([
                 'test_name' => 'test_name',
-                'test_value' => 'test_value123',
+                'test_value' => $this->maskToken($mw, 'test_value123'),
             ])
             ->shouldBeCalledOnce();
 
@@ -412,7 +457,7 @@ class GuardTest extends TestCase
             ->shouldBeCalledOnce();
 
         $requestProphecy
-            ->withAttribute('test_value', 'test_value123')
+            ->withAttribute('test_value', Argument::type('string'))
             ->willReturn($requestProphecy->reveal())
             ->shouldBeCalledOnce();
 
@@ -443,6 +488,10 @@ class GuardTest extends TestCase
         $this->assertArrayHasKey('test_name', $keyPair);
         $this->assertArrayHasKey('test_value', $keyPair);
         $this->assertEquals('test_key2', $keyPair['test_name']);
-        $this->assertEquals('value2', $keyPair['test_value']);
+
+        $unmaskTokenMethod = new ReflectionMethod($mw, 'unmaskToken');
+        $unmaskTokenMethod->setAccessible(true);
+        $unmaskedToken = $unmaskTokenMethod->invoke($mw, $keyPair['test_value']);
+        $this->assertEquals('value2', $unmaskedToken);
     }
 }
