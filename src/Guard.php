@@ -460,6 +460,7 @@ class Guard implements MiddlewareInterface
         } else {
             // Method is GET/OPTIONS/HEAD/etc, so do not accept the token in the body of this request
             if ($name !== null) {
+                $this->enforceStorageLimit();
                 return $this->handleFailure($request, $handler);
             }
         }
