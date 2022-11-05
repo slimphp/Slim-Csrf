@@ -366,6 +366,68 @@ class GuardTest extends TestCase
         self::assertArrayNotHasKey('test_name', $storage);
     }
 
+    public function testTokenIsRemovedFromStorageWhenPersistentModeIsOffOnFailure()
+    {
+        $storage = [
+            'test_name' => 'test_value123',
+            'test_name2' => 'test_value234',
+        ];
+
+        $streamProphecy = $this->prophesize(StreamInterface::class);
+        $streamProphecy
+            ->write('Failed CSRF check!')
+            ->shouldBeCalledOnce();
+
+        $responseProphecy = $this->prophesize(ResponseInterface::class);
+
+        $responseProphecy
+            ->getBody()
+            ->willReturn($streamProphecy->reveal())
+            ->shouldBeCalledOnce();
+
+        $responseProphecy
+            ->withStatus(400)
+            ->willReturn($responseProphecy->reveal())
+            ->shouldBeCalledOnce();
+
+        $responseProphecy
+            ->withHeader('Content-Type', 'text/plain')
+            ->willReturn($responseProphecy->reveal())
+            ->shouldBeCalledOnce();
+
+        $responseProphecy
+            ->withBody($streamProphecy->reveal())
+            ->willReturn($responseProphecy->reveal())
+            ->shouldBeCalledOnce();
+
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $responseFactoryProphecy
+            ->createResponse()
+            ->willReturn($responseProphecy->reveal());
+
+        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
+
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 1);
+        $mw->setStorage($storage); // pass $storage in by reference so we can inspect it later
+
+        $requestProphecy = $this->prophesize(ServerRequestInterface::class);
+        $requestProphecy
+            ->getMethod()
+            ->willReturn('GET')
+            ->shouldBeCalledOnce();
+
+        $requestProphecy
+            ->getParsedBody()
+            ->willReturn([
+                             'test_name' => 'test_value123',
+                         ])
+            ->shouldBeCalledOnce();
+
+        $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
+
+        $this->assertArrayNotHasKey('test_name', $storage);
+    }
+
     public function testTokenInBodyOfGetIsInvalid()
     {
         $storage = [
