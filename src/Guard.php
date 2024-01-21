@@ -446,6 +446,12 @@ class Guard implements MiddlewareInterface
             $value = $body[$this->getTokenValueKey()] ?? null;
         }
 
+        if ($name === null && $value === null) {
+            // DELETE request may not have a request body. Supply token by headers
+            $name = $request->getHeader($this->getTokenNameKey())[0] ?? null;
+            $value = $request->getHeader($this->getTokenValueKey())[0] ?? null;
+        }
+
         if (in_array($request->getMethod(), ['POST', 'PUT', 'DELETE', 'PATCH'])) {
             $isValid = $this->validateToken((string) $name, (string) $value);
             if ($isValid && !$this->persistentTokenMode) {
