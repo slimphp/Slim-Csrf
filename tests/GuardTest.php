@@ -115,6 +115,11 @@ class GuardTest extends TestCase
             ->willReturn([])
             ->shouldBeCalledOnce();
 
+        $requestProphecy
+            ->getHeader(Argument::type('string'))
+            ->willReturn([])
+            ->shouldBeCalledTimes(2);
+
         $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
 
         $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
@@ -173,6 +178,11 @@ class GuardTest extends TestCase
             ->getParsedBody()
             ->willReturn([])
             ->shouldBeCalledOnce();
+
+        $requestProphecy
+            ->getHeader(Argument::type('string'))
+            ->willReturn([])
+            ->shouldBeCalledTimes(2);
 
         $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
 
@@ -476,6 +486,7 @@ class GuardTest extends TestCase
 
         $requestProphecy = $this->prophesize(ServerRequestInterface::class);
         $requestProphecy->getParsedBody()->willReturn(null)->shouldBeCalledOnce();
+        $requestProphecy->getHeader(Argument::type('string'))->willReturn([])->shouldBeCalledTimes(2);
         $requestProphecy
             ->getMethod()
             ->willReturn('GET')
@@ -508,6 +519,7 @@ class GuardTest extends TestCase
 
         $requestProphecy = $this->prophesize(ServerRequestInterface::class);
         $requestProphecy->getParsedBody()->willReturn(null)->shouldBeCalledOnce();
+        $requestProphecy->getHeader(Argument::type('string'))->willReturn([])->shouldBeCalledTimes(2);
         $requestProphecy
             ->getMethod()
             ->willReturn('GET')
@@ -555,5 +567,49 @@ class GuardTest extends TestCase
         $unmaskTokenMethod->setAccessible(true);
         $unmaskedToken = $unmaskTokenMethod->invoke($mw, $keyPair['test_value']);
         $this->assertEquals('value2', $unmaskedToken);
+    }
+
+    public function testTokenFromHeaderOnDelete()
+    {
+        $storage = [
+            'test_name' => 'test_value123',
+        ];
+
+        $responseProphecy = $this->prophesize(ResponseInterface::class)
+            ->willImplement(ResponseInterface::class);
+
+        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
+        $requestHandlerProphecy
+            ->handle(Argument::type(ServerRequestInterface::class))
+            ->willReturn($responseProphecy->reveal())
+            ->shouldBeCalledOnce();
+
+        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+
+        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
+
+        $requestProphecy = $this->prophesize(ServerRequestInterface::class);
+        $requestProphecy
+            ->getMethod()
+            ->willReturn('DELETE')
+            ->shouldBeCalledOnce();
+        $requestProphecy
+            ->withAttribute(Argument::type('string'), Argument::type('string'))
+            ->willReturn($requestProphecy->reveal())
+            ->shouldBeCalledTimes(2);
+        $requestProphecy
+            ->getParsedBody()
+            ->willReturn([])
+            ->shouldBeCalledOnce();
+        $requestProphecy
+            ->getHeader('test_name')
+            ->willReturn(['test_name'])
+            ->shouldBeCalledOnce();
+        $requestProphecy
+            ->getHeader('test_value')
+            ->willReturn([$this->maskToken($mw, 'test_value123')])
+            ->shouldBeCalledOnce();
+
+        $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
     }
 }
