@@ -2,6 +2,10 @@
 
 See https://github.com/slimphp/Slim-Csrf/releases for a full list
 
+## Next
+
+- Added: Support for PHP 8.2 and 8.3
+
 ## 1.4.0
 
 - Added: Allow to set token name and value in header
