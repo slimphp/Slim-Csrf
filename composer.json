@@ -23,7 +23,7 @@
         "psr/http-server-middleware": "^1.0"
     },
     "require-dev": {
-        "phpspec/prophecy": "^1.18",
+        "phpspec/prophecy": "^1.19",
         "phpspec/prophecy-phpunit": "^2.1",
         "phpunit/phpunit": "^9.6",
         "squizlabs/php_codesniffer": "^3.8"
