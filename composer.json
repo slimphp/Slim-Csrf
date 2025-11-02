@@ -23,8 +23,6 @@
         "psr/http-server-middleware": "^1.0"
     },
     "require-dev": {
-        "phpspec/prophecy": "^1.19",
-        "phpspec/prophecy-phpunit": "^2.2",
         "phpunit/phpunit": "^9.6",
         "squizlabs/php_codesniffer": "^3.10"
     },
@@ -37,5 +35,19 @@
         "psr-4": {
             "Slim\\Csrf\\Tests\\": "tests"
         }
+    },
+        "scripts": {
+        "sniffer:check": "phpcs --standard=phpcs.xml",
+        "sniffer:fix": "phpcbf --standard=phpcs.xml",
+        "test": "phpunit --do-not-cache-result --colors=always",
+        "check": [
+            "@sniffer:check",
+            "@test:coverage"
+        ],
+        "test:coverage": [
+            "@putenv XDEBUG_MODE=coverage",
+            "phpunit --do-not-cache-result --colors=always --coverage-clover build/coverage/clover.xml --coverage-html build/coverage --coverage-text"
+        ]
     }
+
 }

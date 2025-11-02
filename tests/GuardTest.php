@@ -12,8 +12,6 @@ namespace Slim\Csrf\Tests;
 
 use ArrayIterator;
 use PHPUnit\Framework\TestCase;
-use Prophecy\Argument;
-use Prophecy\PhpUnit\ProphecyTrait;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -29,7 +27,15 @@ use function substr;
 
 class GuardTest extends TestCase
 {
-    use ProphecyTrait;
+    protected function setAccessible(ReflectionMethod $property, bool $accessible = true): void
+    {
+        // only if PHP version < 8.1
+        if (PHP_VERSION_ID >= 80100) {
+            return;
+        }
+        $property->setAccessible($accessible);
+    }
+
 
     /**
      * Helper function to mask a token using private method {@link Guard::maskToken()}
@@ -44,7 +50,7 @@ class GuardTest extends TestCase
     private function maskToken(Guard $middleware, string $token): string
     {
         $maskTokenMethod = new ReflectionMethod($middleware, 'maskToken');
-        $maskTokenMethod->setAccessible(true);
+        $this->setAccessible($maskTokenMethod);
 
         return $maskTokenMethod->invoke($middleware, $token);
     }
@@ -52,11 +58,11 @@ class GuardTest extends TestCase
     public function testStrengthLowerThan16ThrowsException()
     {
         $storage = [];
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('CSRF middleware instantiation failed. Minimum strength is 16.');
-        new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 200, 15);
+        new Guard($responseFactory, 'test', $storage, null, 200, 15);
     }
 
     /**
@@ -64,11 +70,11 @@ class GuardTest extends TestCase
      */
     public function testSetStorageThrowsExceptionWhenFallingBackOnSessionThatHasNotBeenStarted()
     {
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Invalid CSRF storage.');
-        new Guard($responseFactoryProphecy->reveal(), 'test');
+        new Guard($responseFactory, 'test');
     }
 
     /**
@@ -77,117 +83,123 @@ class GuardTest extends TestCase
     public function testSetStorageSetsKeysOnSessionObjectWhenNotExist()
     {
         session_start();
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        new Guard($responseFactoryProphecy->reveal(), 'test');
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        new Guard($responseFactory, 'test');
 
         $this->assertArrayHasKey('test', $_SESSION);
     }
 
     public function testSetFailureHandler()
     {
-        $self = $this;
-
         $storage = [];
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactory, 'test', $storage);
 
         $called = 0;
-        $handler = function () use ($self, &$called) {
+        $handler = function () use (&$called) {
             $called++;
-            $responseProphecy = $self->prophesize(ResponseInterface::class);
-            return $responseProphecy->reveal();
+            return $this->createMock(ResponseInterface::class);
         };
         $mw->setFailureHandler($handler);
 
-        $requestProphecy = $this->prophesize(ServerRequestInterface::class);
-        $requestProphecy
-            ->getMethod()
-            ->willReturn('POST')
-            ->shouldBeCalledOnce();
+        $request = $this->createMock(ServerRequestInterface::class);
+        $request
+            ->expects($this->once())
+            ->method('getMethod')
+            ->willReturn('POST');
 
-        $requestProphecy
-            ->withAttribute(Argument::type('string'), Argument::type('string'))
-            ->willReturn($requestProphecy->reveal())
-            ->shouldBeCalledTimes(2);
+        $request
+            ->expects($this->exactly(2))
+            ->method('withAttribute')
+            ->with($this->isType('string'), $this->isType('string'))
+            ->willReturn($request);
 
-        $requestProphecy
-            ->getParsedBody()
-            ->willReturn([])
-            ->shouldBeCalledOnce();
+        $request
+            ->expects($this->once())
+            ->method('getParsedBody')
+            ->willReturn([]);
 
-        $requestProphecy
-            ->getHeader(Argument::type('string'))
-            ->willReturn([])
-            ->shouldBeCalledTimes(2);
+        $request
+            ->expects($this->exactly(2))
+            ->method('getHeader')
+            ->with($this->isType('string'))
+            ->willReturn([]);
 
-        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
+        $requestHandler = $this->createMock(RequestHandlerInterface::class);
 
-        $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
+        $mw->process($request, $requestHandler);
         $this->assertEquals(1, $called);
     }
 
     public function testDefaultFailureHandler()
     {
-        $streamProphecy = $this->prophesize(StreamInterface::class);
-        $streamProphecy
-            ->write('Failed CSRF check!')
-            ->shouldBeCalledOnce();
+        $stream = $this->createMock(StreamInterface::class);
+        $stream
+            ->expects($this->once())
+            ->method('write')
+            ->with('Failed CSRF check!');
 
-        $responseProphecy = $this->prophesize(ResponseInterface::class);
+        $response = $this->createMock(ResponseInterface::class);
 
-        $responseProphecy
-            ->getBody()
-            ->willReturn($streamProphecy->reveal())
-            ->shouldBeCalledOnce();
+        $response
+            ->expects($this->once())
+            ->method('getBody')
+            ->willReturn($stream);
 
-        $responseProphecy
-            ->withStatus(400)
-            ->willReturn($responseProphecy->reveal())
-            ->shouldBeCalledOnce();
+        $response
+            ->expects($this->once())
+            ->method('withStatus')
+            ->with(400)
+            ->willReturn($response);
 
-        $responseProphecy
-            ->withHeader('Content-Type', 'text/plain')
-            ->willReturn($responseProphecy->reveal())
-            ->shouldBeCalledOnce();
+        $response
+            ->expects($this->once())
+            ->method('withHeader')
+            ->with('Content-Type', 'text/plain')
+            ->willReturn($response);
 
-        $responseProphecy
-            ->withBody($streamProphecy->reveal())
-            ->willReturn($responseProphecy->reveal())
-            ->shouldBeCalledOnce();
+        $response
+            ->expects($this->once())
+            ->method('withBody')
+            ->with($stream)
+            ->willReturn($response);
 
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $responseFactoryProphecy
-            ->createResponse()
-            ->willReturn($responseProphecy->reveal());
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        $responseFactory
+            ->expects($this->once())
+            ->method('createResponse')
+            ->willReturn($response);
 
         $storage = [];
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
+        $mw = new Guard($responseFactory, 'test', $storage);
 
-        $requestProphecy = $this->prophesize(ServerRequestInterface::class);
-        $requestProphecy
-            ->getMethod()
-            ->willReturn('POST')
-            ->shouldBeCalledOnce();
+        $request = $this->createMock(ServerRequestInterface::class);
+        $request
+            ->expects($this->once())
+            ->method('getMethod')
+            ->willReturn('POST');
 
-        $requestProphecy
-            ->withAttribute(Argument::type('string'), Argument::type('string'))
-            ->willReturn($requestProphecy->reveal())
-            ->shouldBeCalledTimes(2);
+        $request
+            ->expects($this->exactly(2))
+            ->method('withAttribute')
+            ->with($this->isType('string'), $this->isType('string'))
+            ->willReturn($request);
 
-        $requestProphecy
-            ->getParsedBody()
-            ->willReturn([])
-            ->shouldBeCalledOnce();
+        $request
+            ->expects($this->once())
+            ->method('getParsedBody')
+            ->willReturn([]);
 
-        $requestProphecy
-            ->getHeader(Argument::type('string'))
-            ->willReturn([])
-            ->shouldBeCalledTimes(2);
+        $request
+            ->expects($this->exactly(2))
+            ->method('getHeader')
+            ->with($this->isType('string'))
+            ->willReturn([]);
 
-        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
+        $requestHandler = $this->createMock(RequestHandlerInterface::class);
 
-        $response = $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
-        $this->assertSame($response, $responseProphecy->reveal());
+        $actualResponse = $mw->process($request, $requestHandler);
+        $this->assertSame($actualResponse, $response);
     }
 
     public function testValidateToken()
@@ -195,8 +207,8 @@ class GuardTest extends TestCase
         $storage = [
             'test-name' => 'value'
         ];
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactory, 'test', $storage);
 
         $maskedToken = $this->maskToken($mw, 'value');
         $this->assertTrue($mw->validateToken('test-name', $maskedToken));
@@ -212,8 +224,8 @@ class GuardTest extends TestCase
         $storage = [
             'test-name' => 'value'
         ];
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactory, 'test', $storage);
 
         $maskedToken = 'MY_BAD_BASE64???';
         $this->assertFalse($mw->validateToken('test-name', $maskedToken), 'Token contains bad base64 characters');
@@ -227,14 +239,14 @@ class GuardTest extends TestCase
     public function testGetTokenNameAndValue()
     {
         $storage = [];
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactory, 'test', $storage);
 
         $this->assertNull($mw->getTokenName());
         $this->assertNull($mw->getTokenValue());
 
         $loadLastKeyPairMethod = new ReflectionMethod($mw, 'loadLastKeyPair');
-        $loadLastKeyPairMethod->setAccessible(true);
+        $this->setAccessible($loadLastKeyPairMethod);
         $loadLastKeyPairMethod->invoke($mw);
 
         $storage = [
@@ -246,7 +258,7 @@ class GuardTest extends TestCase
         $this->assertEquals('test-name', $mw->getTokenName());
 
         $unmaskTokenMethod = new ReflectionMethod($mw, 'unmaskToken');
-        $unmaskTokenMethod->setAccessible(true);
+        $this->setAccessible($unmaskTokenMethod);
         $unmaskedToken = $unmaskTokenMethod->invoke($mw, $mw->getTokenValue());
         $this->assertEquals('value', $unmaskedToken);
     }
@@ -254,8 +266,8 @@ class GuardTest extends TestCase
     public function testGetPersistentTokenMode()
     {
         $storage = [];
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 200, 16, true);
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactory, 'test', $storage, null, 200, 16, true);
 
         $this->assertTrue($mw->getPersistentTokenMode());
     }
@@ -263,8 +275,8 @@ class GuardTest extends TestCase
     public function testGetTokenNameKeyAndValue()
     {
         $storage = [];
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactory, 'test', $storage);
 
         $this->assertEquals('test-name', $mw->getTokenNameKey());
         $this->assertEquals('test-value', $mw->getTokenValueKey());
@@ -275,11 +287,11 @@ class GuardTest extends TestCase
         $storage = [
             'test-name' => 'value',
         ];
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactory, 'test', $storage);
 
         $removeTokenFromStorageMethod = new ReflectionMethod($mw, 'removeTokenFromStorage');
-        $removeTokenFromStorageMethod->setAccessible(true);
+        $this->setAccessible($removeTokenFromStorageMethod);
         $removeTokenFromStorageMethod->invoke($mw, 'test-name');
 
         $this->assertArrayNotHasKey('test-name', $storage);
@@ -291,11 +303,11 @@ class GuardTest extends TestCase
             'test-name' => 'value',
             'test-name2' => 'value2',
         ];
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 1);
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactory, 'test', $storage, null, 1);
 
         $enforceStorageLimitMethod = new ReflectionMethod($mw, 'enforceStorageLimit');
-        $enforceStorageLimitMethod->setAccessible(true);
+        $this->setAccessible($enforceStorageLimitMethod);
         $enforceStorageLimitMethod->invoke($mw);
 
         $this->assertArrayNotHasKey('test-name', $storage);
@@ -308,11 +320,11 @@ class GuardTest extends TestCase
             'test-name' => 'value',
             'test-name2' => 'value2',
         ];
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 0);
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactory, 'test', $storage, null, 0);
 
         $enforceStorageLimitMethod = new ReflectionMethod($mw, 'enforceStorageLimit');
-        $enforceStorageLimitMethod->setAccessible(true);
+        $this->setAccessible($enforceStorageLimitMethod);
         $enforceStorageLimitMethod->invoke($mw);
 
         $this->assertSame($initial_storage, $storage);
@@ -324,11 +336,11 @@ class GuardTest extends TestCase
             'test-name' => 'value',
             'test-name2' => 'value',
         ]);
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 1);
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactory, 'test', $storage, null, 1);
 
         $enforceStorageLimitMethod = new ReflectionMethod($mw, 'enforceStorageLimit');
-        $enforceStorageLimitMethod->setAccessible(true);
+        $this->setAccessible($enforceStorageLimitMethod);
         $enforceStorageLimitMethod->invoke($mw);
 
         $this->assertArrayNotHasKey('test-name', $storage);
@@ -341,38 +353,38 @@ class GuardTest extends TestCase
             'test-name' => 'test-value123',
         ];
 
-        $responseProphecy = $this->prophesize(ResponseInterface::class)
-            ->willImplement(ResponseInterface::class);
+        $response = $this->createMock(ResponseInterface::class);
 
-        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
-        $requestHandlerProphecy
-            ->handle(Argument::type(ServerRequestInterface::class))
-            ->willReturn($responseProphecy->reveal())
-            ->shouldBeCalledOnce();
+        $requestHandler = $this->createMock(RequestHandlerInterface::class);
+        $requestHandler
+            ->expects($this->once())
+            ->method('handle')
+            ->with($this->isInstanceOf(ServerRequestInterface::class))
+            ->willReturn($response);
 
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
 
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
+        $mw = new Guard($responseFactory, 'test', $storage);
 
-        $requestProphecy = $this->prophesize(ServerRequestInterface::class);
-        $requestProphecy
-            ->getMethod()
-            ->willReturn('POST')
-            ->shouldBeCalledOnce();
-        $requestProphecy
-            ->withAttribute(Argument::type('string'), Argument::type('string'))
-            ->willReturn($requestProphecy->reveal())
-            ->shouldBeCalledTimes(2);
-        $requestProphecy
-            ->getParsedBody()
+        $request = $this->createMock(ServerRequestInterface::class);
+        $request
+            ->expects($this->once())
+            ->method('getMethod')
+            ->willReturn('POST');
+        $request
+            ->expects($this->exactly(2))
+            ->method('withAttribute')
+            ->with($this->isType('string'), $this->isType('string'))
+            ->willReturn($request);
+        $request
+            ->expects($this->once())
+            ->method('getParsedBody')
             ->willReturn([
                 'test-name' => 'test-name',
                 'test-value' => $this->maskToken($mw, 'test-value123'),
-            ])
-            ->shouldBeCalledOnce();
+            ]);
 
-
-        $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
+        $mw->process($request, $requestHandler);
         self::assertArrayNotHasKey('test-name', $storage);
     }
 
@@ -383,57 +395,62 @@ class GuardTest extends TestCase
             'test-name2' => 'test-value234',
         ];
 
-        $streamProphecy = $this->prophesize(StreamInterface::class);
-        $streamProphecy
-            ->write('Failed CSRF check!')
-            ->shouldBeCalledOnce();
+        $stream = $this->createMock(StreamInterface::class);
+        $stream
+            ->expects($this->once())
+            ->method('write')
+            ->with('Failed CSRF check!');
 
-        $responseProphecy = $this->prophesize(ResponseInterface::class);
+        $response = $this->createMock(ResponseInterface::class);
 
-        $responseProphecy
-            ->getBody()
-            ->willReturn($streamProphecy->reveal())
-            ->shouldBeCalledOnce();
+        $response
+            ->expects($this->once())
+            ->method('getBody')
+            ->willReturn($stream);
 
-        $responseProphecy
-            ->withStatus(400)
-            ->willReturn($responseProphecy->reveal())
-            ->shouldBeCalledOnce();
+        $response
+            ->expects($this->once())
+            ->method('withStatus')
+            ->with(400)
+            ->willReturn($response);
 
-        $responseProphecy
-            ->withHeader('Content-Type', 'text/plain')
-            ->willReturn($responseProphecy->reveal())
-            ->shouldBeCalledOnce();
+        $response
+            ->expects($this->once())
+            ->method('withHeader')
+            ->with('Content-Type', 'text/plain')
+            ->willReturn($response);
 
-        $responseProphecy
-            ->withBody($streamProphecy->reveal())
-            ->willReturn($responseProphecy->reveal())
-            ->shouldBeCalledOnce();
+        $response
+            ->expects($this->once())
+            ->method('withBody')
+            ->with($stream)
+            ->willReturn($response);
 
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $responseFactoryProphecy
-            ->createResponse()
-            ->willReturn($responseProphecy->reveal());
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        $responseFactory
+            ->expects($this->once())
+            ->method('createResponse')
+            ->willReturn($response);
 
-        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
+        $requestHandler = $this->createMock(RequestHandlerInterface::class);
 
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 1);
+        $mw = new Guard($responseFactory, 'test', $storage, null, 1);
         $mw->setStorage($storage); // pass $storage in by reference so we can inspect it later
 
-        $requestProphecy = $this->prophesize(ServerRequestInterface::class);
-        $requestProphecy
-            ->getMethod()
-            ->willReturn('GET')
-            ->shouldBeCalledOnce();
+        $request = $this->createMock(ServerRequestInterface::class);
+        $request
+            ->expects($this->once())
+            ->method('getMethod')
+            ->willReturn('GET');
 
-        $requestProphecy
-            ->getParsedBody()
+        $request
+            ->expects($this->once())
+            ->method('getParsedBody')
             ->willReturn([
                              'test-name' => 'test-value123',
-                         ])
-            ->shouldBeCalledOnce();
+                         ]);
 
-        $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
+        $mw->process($request, $requestHandler);
 
         $this->assertArrayNotHasKey('test-name', $storage);
     }
@@ -445,66 +462,66 @@ class GuardTest extends TestCase
         ];
 
         // we set up a failure handler that we expect to be called because a GET cannot have a token
-        $self = $this;
         $failureHandlerCalled = 0;
-        $failureHandler = function () use ($self, &$failureHandlerCalled) {
+        $failureHandler = function () use (&$failureHandlerCalled) {
             $failureHandlerCalled++;
-            $responseProphecy = $self->prophesize(ResponseInterface::class);
-            return $responseProphecy->reveal();
+            return $this->createMock(ResponseInterface::class);
         };
 
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
 
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, $failureHandler);
+        $mw = new Guard($responseFactory, 'test', $storage, $failureHandler);
 
-        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
+        $requestHandler = $this->createMock(RequestHandlerInterface::class);
 
-        $requestProphecy = $this->prophesize(ServerRequestInterface::class);
-        $requestProphecy
-            ->getMethod()
-            ->willReturn('GET')
-            ->shouldBeCalledOnce();
-        $requestProphecy
-            ->getParsedBody()
+        $request = $this->createMock(ServerRequestInterface::class);
+        $request
+            ->expects($this->once())
+            ->method('getMethod')
+            ->willReturn('GET');
+        $request
+            ->expects($this->once())
+            ->method('getParsedBody')
             ->willReturn([
                 'test-name' => 'test-name',
                 'test-value' => 'test-value123',
-            ])
-            ->shouldBeCalledOnce();
+            ]);
 
-        $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
+        $mw->process($request, $requestHandler);
         self::assertSame(1, $failureHandlerCalled);
     }
 
     public function testProcessAppendsNewTokensWhenPersistentTokenModeIsOff()
     {
         $storage = [];
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactory, 'test', $storage);
 
-        $responseProphecy = $this->prophesize(ResponseInterface::class);
+        $response = $this->createMock(ResponseInterface::class);
 
-        $requestProphecy = $this->prophesize(ServerRequestInterface::class);
-        $requestProphecy->getParsedBody()->willReturn(null)->shouldBeCalledOnce();
-        $requestProphecy->getHeader(Argument::type('string'))->willReturn([])->shouldBeCalledTimes(2);
-        $requestProphecy
-            ->getMethod()
-            ->willReturn('GET')
-            ->shouldBeCalledOnce();
+        $request = $this->createMock(ServerRequestInterface::class);
+        $request->expects($this->once())->method('getParsedBody')->willReturn(null);
+        $request->expects($this->exactly(2))->method('getHeader')->with($this->isType('string'))->willReturn([]);
+        $request
+            ->expects($this->once())
+            ->method('getMethod')
+            ->willReturn('GET');
 
-        $requestProphecy
-            ->withAttribute(Argument::type('string'), Argument::type('string'))
-            ->willReturn($requestProphecy->reveal())
-            ->shouldBeCalledTimes(2);
+        $request
+            ->expects($this->exactly(2))
+            ->method('withAttribute')
+            ->with($this->isType('string'), $this->isType('string'))
+            ->willReturn($request);
 
-        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
+        $requestHandler = $this->createMock(RequestHandlerInterface::class);
 
-        $requestHandlerProphecy
-            ->handle($requestProphecy)
-            ->willReturn($responseProphecy->reveal())
-            ->shouldBeCalledOnce();
+        $requestHandler
+            ->expects($this->once())
+            ->method('handle')
+            ->with($request)
+            ->willReturn($response);
 
-        $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
+        $mw->process($request, $requestHandler);
     }
 
     public function testProcessAppendsNewTokensWhenPersistentTokenModeIsOn()
@@ -512,37 +529,36 @@ class GuardTest extends TestCase
         $storage = [
             'test-name123' => 'test-value123',
         ];
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 200, 16, true);
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactory, 'test', $storage, null, 200, 16, true);
 
-        $responseProphecy = $this->prophesize(ResponseInterface::class);
+        $response = $this->createMock(ResponseInterface::class);
 
-        $requestProphecy = $this->prophesize(ServerRequestInterface::class);
-        $requestProphecy->getParsedBody()->willReturn(null)->shouldBeCalledOnce();
-        $requestProphecy->getHeader(Argument::type('string'))->willReturn([])->shouldBeCalledTimes(2);
-        $requestProphecy
-            ->getMethod()
-            ->willReturn('GET')
-            ->shouldBeCalledOnce();
+        $request = $this->createMock(ServerRequestInterface::class);
+        $request->expects($this->once())->method('getParsedBody')->willReturn(null);
+        $request->expects($this->exactly(2))->method('getHeader')->with($this->isType('string'))->willReturn([]);
+        $request
+            ->expects($this->once())
+            ->method('getMethod')
+            ->willReturn('GET');
 
-        $requestProphecy
-            ->withAttribute('test-name', 'test-name123')
-            ->willReturn($requestProphecy->reveal())
-            ->shouldBeCalledOnce();
+        $request
+            ->expects($this->exactly(2))
+            ->method('withAttribute')
+            ->withConsecutive(
+                ['test-name', 'test-name123'],
+                ['test-value', $this->isType('string')]
+            )
+            ->willReturn($request);
 
-        $requestProphecy
-            ->withAttribute('test-value', Argument::type('string'))
-            ->willReturn($requestProphecy->reveal())
-            ->shouldBeCalledOnce();
+        $requestHandler = $this->createMock(RequestHandlerInterface::class);
+        $requestHandler
+            ->expects($this->once())
+            ->method('handle')
+            ->with($request)
+            ->willReturn($response);
 
-        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
-
-        $requestHandlerProphecy
-            ->handle($requestProphecy)
-            ->willReturn($responseProphecy->reveal())
-            ->shouldBeCalledOnce();
-
-        $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
+        $mw->process($request, $requestHandler);
     }
 
     public function testCanGetLastKeyPairFromIterator()
@@ -551,11 +567,11 @@ class GuardTest extends TestCase
             'test-key1' => 'value1',
             'test-key2' => 'value2',
         ]);
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage, null, 1);
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        $mw = new Guard($responseFactory, 'test', $storage, null, 1);
 
         $enforceStorageLimitMethod = new ReflectionMethod($mw, 'getLastKeyPair');
-        $enforceStorageLimitMethod->setAccessible(true);
+        $this->setAccessible($enforceStorageLimitMethod);
         $keyPair = $enforceStorageLimitMethod->invoke($mw);
 
         $this->assertIsArray($keyPair);
@@ -564,7 +580,7 @@ class GuardTest extends TestCase
         $this->assertEquals('test-key2', $keyPair['test-name']);
 
         $unmaskTokenMethod = new ReflectionMethod($mw, 'unmaskToken');
-        $unmaskTokenMethod->setAccessible(true);
+        $this->setAccessible($unmaskTokenMethod);
         $unmaskedToken = $unmaskTokenMethod->invoke($mw, $keyPair['test-value']);
         $this->assertEquals('value2', $unmaskedToken);
     }
@@ -575,41 +591,39 @@ class GuardTest extends TestCase
             'test-name' => 'test-value123',
         ];
 
-        $responseProphecy = $this->prophesize(ResponseInterface::class)
-            ->willImplement(ResponseInterface::class);
+        $response = $this->createMock(ResponseInterface::class);
 
-        $requestHandlerProphecy = $this->prophesize(RequestHandlerInterface::class);
-        $requestHandlerProphecy
-            ->handle(Argument::type(ServerRequestInterface::class))
-            ->willReturn($responseProphecy->reveal())
-            ->shouldBeCalledOnce();
+        $requestHandler = $this->createMock(RequestHandlerInterface::class);
+        $requestHandler
+            ->expects($this->once())
+            ->method('handle')
+            ->with($this->isInstanceOf(ServerRequestInterface::class))
+            ->willReturn($response);
 
-        $responseFactoryProphecy = $this->prophesize(ResponseFactoryInterface::class);
+        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
 
-        $mw = new Guard($responseFactoryProphecy->reveal(), 'test', $storage);
+        $mw = new Guard($responseFactory, 'test', $storage);
 
-        $requestProphecy = $this->prophesize(ServerRequestInterface::class);
-        $requestProphecy
-            ->getMethod()
-            ->willReturn('DELETE')
-            ->shouldBeCalledOnce();
-        $requestProphecy
-            ->withAttribute(Argument::type('string'), Argument::type('string'))
-            ->willReturn($requestProphecy->reveal())
-            ->shouldBeCalledTimes(2);
-        $requestProphecy
-            ->getParsedBody()
-            ->willReturn([])
-            ->shouldBeCalledOnce();
-        $requestProphecy
-            ->getHeader('test-name')
-            ->willReturn(['test-name'])
-            ->shouldBeCalledOnce();
-        $requestProphecy
-            ->getHeader('test-value')
-            ->willReturn([$this->maskToken($mw, 'test-value123')])
-            ->shouldBeCalledOnce();
+        $request = $this->createMock(ServerRequestInterface::class);
+        $request
+            ->expects($this->once())
+            ->method('getMethod')
+            ->willReturn('DELETE');
+        $request
+            ->expects($this->exactly(2))
+            ->method('withAttribute')
+            ->with($this->isType('string'), $this->isType('string'))
+            ->willReturn($request);
+        $request
+            ->expects($this->once())
+            ->method('getParsedBody')
+            ->willReturn([]);
+        $request
+            ->expects($this->exactly(2))
+            ->method('getHeader')
+            ->withConsecutive(['test-name'], ['test-value'])
+            ->willReturnOnConsecutiveCalls(['test-name'], [$this->maskToken($mw, 'test-value123')]);
 
-        $mw->process($requestProphecy->reveal(), $requestHandlerProphecy->reveal());
+        $mw->process($request, $requestHandler);
     }
 }
