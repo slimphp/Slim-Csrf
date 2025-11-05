@@ -542,14 +542,21 @@ class GuardTest extends TestCase
             ->method('getMethod')
             ->willReturn('GET');
 
+        $withAttributeCallCount = 0;
         $request
             ->expects($this->exactly(2))
             ->method('withAttribute')
-            ->withConsecutive(
-                ['test-name', 'test-name123'],
-                ['test-value', $this->isType('string')]
-            )
-            ->willReturn($request);
+            ->willReturnCallback(function ($key, $value) use ($request, &$withAttributeCallCount) {
+                $withAttributeCallCount++;
+                if ($withAttributeCallCount === 1) {
+                    $this->assertEquals('test-name', $key);
+                    $this->assertEquals('test-name123', $value);
+                } elseif ($withAttributeCallCount === 2) {
+                    $this->assertEquals('test-value', $key);
+                    $this->assertIsString($value);
+                }
+                return $request;
+            });
 
         $requestHandler = $this->createMock(RequestHandlerInterface::class);
         $requestHandler
@@ -618,11 +625,22 @@ class GuardTest extends TestCase
             ->expects($this->once())
             ->method('getParsedBody')
             ->willReturn([]);
+        $maskedToken = $this->maskToken($mw, 'test-value123');
+        $getHeaderCallCount = 0;
         $request
             ->expects($this->exactly(2))
             ->method('getHeader')
-            ->withConsecutive(['test-name'], ['test-value'])
-            ->willReturnOnConsecutiveCalls(['test-name'], [$this->maskToken($mw, 'test-value123')]);
+            ->willReturnCallback(function ($header) use (&$getHeaderCallCount, $maskedToken) {
+                $getHeaderCallCount++;
+                if ($getHeaderCallCount === 1) {
+                    $this->assertEquals('test-name', $header);
+                    return ['test-name'];
+                } elseif ($getHeaderCallCount === 2) {
+                    $this->assertEquals('test-value', $header);
+                    return [$maskedToken];
+                }
+                return [];
+            });
 
         $mw->process($request, $requestHandler);
     }
