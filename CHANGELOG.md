@@ -4,6 +4,10 @@ See https://github.com/slimphp/Slim-Csrf/releases for a full list
 
 ## Next
 
+## 1.5.1
+
+- Added: Support for PHP 8.4 and 8.5
+
 ## 1.5.0
 
 - Added: Support for PHP 8.2 and 8.3
