@@ -4,6 +4,7 @@ See https://github.com/slimphp/Slim-Csrf/releases for a full list
 
 ## 2.x
 
+- Added: Support for PHP 8.4 and 8.5
 - Fixed: The key names are now the correct format to be sent as headers. 
 
   This is a potential BC break. The key names now use a dash rather than an
@@ -11,6 +12,10 @@ See https://github.com/slimphp/Slim-Csrf/releases for a full list
   if you have hard-coded, then they will need to be updated.
 
 - Changed: Increased likelihood that tokens are unique. 
+
+## 1.5.1
+
+- Added: Support for PHP 8.4 and 8.5
 
 ## 1.5.0
 
